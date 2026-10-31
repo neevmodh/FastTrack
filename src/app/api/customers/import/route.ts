@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { parseCsv } from "@/lib/csv";
@@ -14,6 +13,8 @@ const CUSTOMER_ID_HEADERS = new Set([
   "account",
   "id",
 ]);
+
+export const maxDuration = 60;
 
 function normalizeHeader(h: string): string {
   return h.trim().toLowerCase().replace(/[\s_-]+/g, "");
@@ -84,36 +85,43 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let created = 0;
-  let skipped = 0;
   const errors: { row: number; message: string }[] = [];
+  let blank = 0;
+  let dupesInFile = 0;
+  const seen = new Set<string>();
+  const uniqueIds: string[] = [];
 
-  for (let i = 0; i < ids.length; i++) {
-    const customerId = ids[i];
+  ids.forEach((customerId, i) => {
     if (!customerId) {
-      skipped++;
+      blank++;
       errors.push({ row: i + 2, message: "No Customer ID — skipped." });
-      continue;
+      return;
     }
+    if (seen.has(customerId)) {
+      dupesInFile++;
+      errors.push({ row: i + 2, message: "Duplicate within file — skipped." });
+      return;
+    }
+    seen.add(customerId);
+    uniqueIds.push(customerId);
+  });
 
-    try {
-      const existing = await prisma.customer.findUnique({ where: { customerId } });
-      if (existing) {
-        skipped++;
-        errors.push({ row: i + 2, message: "Already exists — skipped." });
-        continue;
-      }
-      await prisma.customer.create({ data: { customerId } });
-      created++;
-    } catch (err) {
-      skipped++;
-      const message =
-        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
-          ? "Duplicate Customer ID."
-          : "Failed to save this row.";
-      errors.push({ row: i + 2, message });
-    }
+  // Bulk-insert in one round trip per chunk instead of a query per row —
+  // a per-row findUnique+create loop over a few thousand rows reliably
+  // blows the serverless function's execution timeout.
+  const CHUNK = 2000;
+  let created = 0;
+  for (let i = 0; i < uniqueIds.length; i += CHUNK) {
+    const chunk = uniqueIds.slice(i, i + CHUNK);
+    const result = await prisma.customer.createMany({
+      data: chunk.map((customerId) => ({ customerId })),
+      skipDuplicates: true,
+    });
+    created += result.count;
   }
+
+  const existedAlready = uniqueIds.length - created;
+  const skipped = blank + dupesInFile + existedAlready;
 
   await prisma.auditLog.create({
     data: {
