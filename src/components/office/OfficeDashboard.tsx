@@ -56,7 +56,7 @@ function OfficeDashboardInner({ isAdmin }: { isAdmin: boolean }) {
   const openComplaints = complaints.filter((c) => c.status !== "RESOLVED").length;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-wrap">
+    <div className="flex w-full flex-1 flex-wrap">
       <nav
         aria-label="Primary"
         className="w-full flex-shrink-0 border-b border-neutral-200 bg-white p-3 sm:w-[196px] sm:border-b-0 sm:border-r sm:p-4"
@@ -99,6 +99,7 @@ function OfficeDashboardInner({ isAdmin }: { isAdmin: boolean }) {
       </nav>
 
       <main className="min-w-0 flex-1 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-[1400px]">
         {tab === "dashboard" && (
           <AnalyticsDashboard onus={onus} complaints={complaints} users={users} />
         )}
@@ -125,6 +126,7 @@ function OfficeDashboardInner({ isAdmin }: { isAdmin: boolean }) {
         {tab === "complaints" && (
           <ComplaintsPanel complaints={complaints} onRefresh={loadComplaints} />
         )}
+      </div>
       </main>
     </div>
   );
