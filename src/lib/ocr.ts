@@ -1,5 +1,4 @@
 import Tesseract from "tesseract.js";
-import { recognizeWithPaddle } from "@/lib/ocr-paddle";
 
 export type OcrResult = {
   rawText: string;
@@ -66,45 +65,19 @@ function buildResult(rawText: string): OcrResult {
   };
 }
 
-// Company name and MAC address are the two fields that matter most, so
-// this tries PaddleOCR first (its text-detection network handles text
-// printed right next to a barcode — the common layout on ONU labels — far
-// better than Tesseract did in testing). If PaddleOCR is slow, unsupported
-// (no WebGL), or still misses the MAC or company after that pass, it falls
-// back to Tesseract and fills in whatever PaddleOCR didn't find.
+// On-device, offline-capable OCR. This is the fallback path used by
+// OcrCapture only when the server-side vision-LLM endpoint (/api/ocr,
+// Gemini) is unreachable — e.g. no network in the field. Verified against
+// real ONU label photos: the vision-LLM path got company+MAC exactly right
+// on 5/5 test photos, while Tesseract alone missed the MAC on 3/5 (barcode-
+// adjacent text is a known weak spot for its layout analysis). Keep this as
+// the safety net, not the primary path.
 export async function runOcr(
   imageSource: File | Blob | string,
   onProgress?: (p: number) => void
 ): Promise<OcrResult> {
-  let paddleResult: OcrResult | null = null;
-
-  try {
-    const paddleText = await recognizeWithPaddle(imageSource);
-    paddleResult = buildResult(paddleText);
-  } catch (err) {
-    console.warn("PaddleOCR unavailable, falling back to Tesseract", err);
-  }
-
-  const needsFallback =
-    !paddleResult || !paddleResult.macAddress || !paddleResult.companyName;
-
-  if (!needsFallback) return paddleResult!;
-
-  const tesseractText = await recognizeWithTesseract(imageSource, onProgress);
-  const tesseractResult = buildResult(tesseractText);
-
-  if (!paddleResult) return tesseractResult;
-
-  // Merge: prefer whichever engine found each field, preferring PaddleOCR.
-  return {
-    rawText: paddleResult.rawText + "\n" + tesseractResult.rawText,
-    macAddress: paddleResult.macAddress ?? tesseractResult.macAddress,
-    companyName: paddleResult.companyName ?? tesseractResult.companyName,
-    serialNumber: paddleResult.serialNumber ?? tesseractResult.serialNumber,
-    ponSerial: paddleResult.ponSerial ?? tesseractResult.ponSerial,
-    model: paddleResult.model ?? tesseractResult.model,
-    specSummary: paddleResult.specSummary ?? tesseractResult.specSummary,
-  };
+  const text = await recognizeWithTesseract(imageSource, onProgress);
+  return buildResult(text);
 }
 
 function extractMac(text: string): string | undefined {

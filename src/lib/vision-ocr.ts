@@ -65,7 +65,7 @@ async function recognizeWithGemini(
   const mimeType = file.type || "image/jpeg";
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,7 +97,7 @@ async function recognizeWithGemini(
 async function recognizeWithGroq(
   file: File | Blob,
   apiKey: string,
-  model = process.env.GROQ_VISION_MODEL || "llama-3.2-90b-vision-preview"
+  model: string
 ): Promise<VisionOcrResult> {
   const base64 = await fileToBase64(file);
   const mimeType = file.type || "image/jpeg";
@@ -155,9 +155,13 @@ export async function recognizeWithVisionLlm(
     }
   }
 
-  if (groqKey) {
+  // Groq currently has no vision-capable model available on the free tier
+  // (confirmed against their live /models list) — only attempt it if a
+  // specific vision model is explicitly configured, so we don't burn a
+  // request on a guaranteed-wrong default model name.
+  if (groqKey && process.env.GROQ_VISION_MODEL) {
     try {
-      return await recognizeWithGroq(file, groqKey);
+      return await recognizeWithGroq(file, groqKey, process.env.GROQ_VISION_MODEL);
     } catch (err) {
       errors.push(`Groq: ${err instanceof Error ? err.message : err}`);
     }
