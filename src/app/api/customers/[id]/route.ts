@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
 const updateSchema = z.object({
-  name: z.string().min(1).optional(),
+  customerId: z.string().trim().min(1).optional().nullable(),
+  name: z.string().min(1).optional().nullable(),
   phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   email: z.string().email().optional().nullable().or(z.literal("")),
@@ -25,13 +27,27 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const updated = await prisma.customer.update({
-    where: { id },
-    data: {
-      ...parsed.data,
-      email: parsed.data.email || undefined,
-    },
-  });
+  let updated;
+  try {
+    updated = await prisma.customer.update({
+      where: { id },
+      data: {
+        ...parsed.data,
+        email: parsed.data.email || undefined,
+      },
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "A customer with this Customer ID already exists." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 
   await prisma.auditLog.create({
     data: {
@@ -56,7 +72,7 @@ export async function DELETE(
   const { id } = await params;
   const target = await prisma.customer.findUnique({
     where: { id },
-    select: { name: true },
+    select: { name: true, customerId: true },
   });
   if (!target) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
@@ -72,7 +88,7 @@ export async function DELETE(
       action: "CUSTOMER_DELETED",
       entityType: "Customer",
       entityId: id,
-      details: `Deleted customer ${target.name}`,
+      details: `Deleted customer ${target.name ?? target.customerId ?? id}`,
     },
   });
 

@@ -48,10 +48,14 @@ export default function CustomerPicker({
       <div className="rounded-md border border-neutral-300 bg-neutral-50 px-3 py-2">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-neutral-900">{value.name}</p>
-            {(value.phone || value.address) && (
+            <p className="text-sm font-medium text-neutral-900">
+              {value.name ?? value.customerId ?? "Unnamed customer"}
+            </p>
+            {(value.customerId || value.phone || value.address) && (
               <p className="text-xs text-neutral-600">
-                {[value.phone, value.address].filter(Boolean).join(" · ")}
+                {[value.name && value.customerId, value.phone, value.address]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             )}
           </div>
@@ -92,9 +96,13 @@ export default function CustomerPicker({
                     onClick={() => select(c)}
                     className="block w-full px-3 py-2 text-left text-sm hover:bg-neutral-50"
                   >
-                    <span className="font-medium text-neutral-900">{c.name}</span>
-                    {c.phone && (
-                      <span className="ml-2 text-xs text-neutral-600">{c.phone}</span>
+                    <span className="font-medium text-neutral-900">
+                      {c.name ?? c.customerId ?? "Unnamed customer"}
+                    </span>
+                    {(c.customerId || c.phone) && (
+                      <span className="ml-2 text-xs text-neutral-600">
+                        {[c.name && c.customerId, c.phone].filter(Boolean).join(" · ")}
+                      </span>
                     )}
                   </button>
                 ))}

@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Customer } from "@/lib/types";
+
+type ImportResult = {
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: { row: number; message: string }[];
+};
 
 export default function CustomersPanel({ accent }: { accent: "staff" | "office" }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const accentVar = accent === "staff" ? "--staff-accent" : "--office-accent";
-  const accentDarkVar = accent === "staff" ? "--staff-accent-dark" : "--office-accent-dark";
 
   async function load(query?: string) {
     setLoading(true);
@@ -30,11 +41,30 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
     load(q);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete customer "${name}"? Past installation records keep a snapshot of their details.`))
+  async function handleDelete(id: string, label: string) {
+    if (!confirm(`Delete customer "${label}"? Past installation records keep a snapshot of their details.`))
       return;
     const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
     if (res.ok) load(q);
+  }
+
+  async function handleImportFile(file: File) {
+    setImporting(true);
+    setImportError("");
+    setImportResult(null);
+
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/customers/import", { method: "POST", body: form });
+    setImporting(false);
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setImportError(body?.error ?? "Import failed.");
+      return;
+    }
+    setImportResult(await res.json());
+    load(q);
   }
 
   return (
@@ -42,7 +72,7 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
-            placeholder="Search by name, phone, address..."
+            placeholder="Search by Customer ID, name, phone..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="w-64 rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
@@ -61,7 +91,48 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
         >
           {showForm ? "Cancel" : "Add customer"}
         </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,.json,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImportFile(file);
+            e.target.value = "";
+          }}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={importing}
+          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+        >
+          {importing ? "Importing..." : "Import CSV / JSON"}
+        </button>
       </div>
+
+      {importError && (
+        <p className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {importError}
+        </p>
+      )}
+      {importResult && (
+        <div className="mb-3 rounded-md bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+          <p>
+            Imported {importResult.total} row(s): {importResult.created} created,{" "}
+            {importResult.updated} updated, {importResult.skipped} skipped.
+          </p>
+          {importResult.errors.length > 0 && (
+            <ul className="mt-1 list-inside list-disc text-xs text-neutral-600">
+              {importResult.errors.map((e, i) => (
+                <li key={i}>
+                  Row {e.row}: {e.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {showForm && (
         <AddCustomerForm
@@ -80,6 +151,7 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-600">
+                <th className="px-3 py-2">Customer ID</th>
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">Phone</th>
                 <th className="px-3 py-2">Address</th>
@@ -90,7 +162,12 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
             <tbody>
               {customers.map((c) => (
                 <tr key={c.id} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-3 py-2 font-medium text-neutral-900">{c.name}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-neutral-700">
+                    {c.customerId ?? "-"}
+                  </td>
+                  <td className="px-3 py-2 font-medium text-neutral-900">
+                    {c.name ?? "-"}
+                  </td>
                   <td className="px-3 py-2 text-neutral-600">{c.phone ?? "-"}</td>
                   <td className="px-3 py-2 text-neutral-600">{c.address ?? "-"}</td>
                   <td className="px-3 py-2 text-neutral-600">
@@ -98,7 +175,9 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
                   </td>
                   <td className="px-3 py-2 text-right">
                     <button
-                      onClick={() => handleDelete(c.id, c.name)}
+                      onClick={() =>
+                        handleDelete(c.id, c.name ?? c.customerId ?? c.id)
+                      }
                       className="text-xs text-red-600 hover:underline"
                     >
                       Delete
@@ -108,7 +187,7 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
               ))}
               {customers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-neutral-600">
+                  <td colSpan={6} className="px-3 py-6 text-center text-neutral-600">
                     No customers found.
                   </td>
                 </tr>
@@ -128,13 +207,23 @@ function AddCustomerForm({
   accentVar: string;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({ name: "", phone: "", address: "", email: "" });
+  const [form, setForm] = useState({
+    customerId: "",
+    name: "",
+    phone: "",
+    address: "",
+    email: "",
+  });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!form.customerId.trim() && !form.name.trim()) {
+      setError("Provide at least a Customer ID or a name.");
+      return;
+    }
     setSubmitting(true);
     const res = await fetch("/api/customers", {
       method: "POST",
@@ -157,8 +246,13 @@ function AddCustomerForm({
       className="mb-3 grid max-w-md grid-cols-1 gap-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
       <input
-        required
-        placeholder="Customer name"
+        placeholder="Customer ID (account number, code, etc. — optional)"
+        value={form.customerId}
+        onChange={(e) => setForm({ ...form, customerId: e.target.value })}
+        className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
+      />
+      <input
+        placeholder="Customer name (optional)"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         className="rounded-md border border-neutral-300 px-3 py-2 text-sm"

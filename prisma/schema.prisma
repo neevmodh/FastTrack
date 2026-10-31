@@ -76,7 +76,12 @@ model Onu {
 
 model Customer {
   id            String   @id @default(cuid())
-  name          String
+  // External reference/account ID from existing records (not our internal
+  // `id`) — free text, no format constraint, so it can hold whatever the
+  // source system uses (account numbers, emails, alphanumeric codes, etc).
+  // Unique when present so CSV/Excel/JSON imports can upsert by it.
+  customerId    String?  @unique
+  name          String?
   phone         String?
   address       String?
   email         String?
