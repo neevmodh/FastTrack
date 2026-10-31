@@ -65,10 +65,10 @@ model Onu {
   updatedAt     DateTime  @updatedAt
 
   addedById     String?
-  addedBy       User?     @relation("OnuAddedBy", fields: [addedById], references: [id])
+  addedBy       User?     @relation("OnuAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
 
   assignedToId  String?
-  assignedTo    User?     @relation("OnuAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo    User?     @relation("OnuAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   installation  Installation?
   complaints    Complaint[]
@@ -103,7 +103,7 @@ model Complaint {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action     String
   entityType String?
   entityId   String?

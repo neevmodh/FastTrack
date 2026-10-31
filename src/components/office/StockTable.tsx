@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Onu } from "@/lib/types";
+import type { AppUser, Onu } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
   IN_STOCK: "bg-neutral-100 text-neutral-700",
@@ -13,10 +13,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function StockTable({
   onus,
+  staffUsers,
   loading,
   onRefresh,
 }: {
   onus: Onu[];
+  staffUsers: AppUser[];
   loading: boolean;
   onRefresh: () => void;
 }) {
@@ -27,7 +29,9 @@ export default function StockTable({
     return (
       o.companyName.toLowerCase().includes(needle) ||
       o.macAddress.toLowerCase().includes(needle) ||
-      (o.serialNumber ?? "").toLowerCase().includes(needle)
+      (o.serialNumber ?? "").toLowerCase().includes(needle) ||
+      (o.assignedTo?.name ?? "").toLowerCase().includes(needle) ||
+      (o.installation?.customerName ?? "").toLowerCase().includes(needle)
     );
   });
 
@@ -37,11 +41,23 @@ export default function StockTable({
     if (res.ok) onRefresh();
   }
 
+  async function handleAssign(id: string, staffId: string) {
+    await fetch(`/api/onu/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assignedToId: staffId || null,
+        status: staffId ? "ASSIGNED" : "IN_STOCK",
+      }),
+    });
+    onRefresh();
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
         <input
-          placeholder="Search by company, MAC, or serial..."
+          placeholder="Search by company, MAC, serial, staff, or customer..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="w-full max-w-sm rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
@@ -65,7 +81,9 @@ export default function StockTable({
                 <th className="px-3 py-2">MAC</th>
                 <th className="px-3 py-2">Serial</th>
                 <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Assigned to</th>
+                <th className="px-3 py-2">Staff</th>
+                <th className="px-3 py-2">Customer</th>
+                <th className="px-3 py-2">Installed</th>
                 <th className="px-3 py-2">Added by</th>
                 <th className="px-3 py-2"></th>
               </tr>
@@ -75,6 +93,9 @@ export default function StockTable({
                 <tr key={o.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-3 py-2 font-medium text-neutral-900">
                     {o.companyName}
+                    {o.model && (
+                      <span className="block text-xs text-neutral-600">{o.model}</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-neutral-600">
                     {o.macAddress}
@@ -90,7 +111,37 @@ export default function StockTable({
                     </span>
                   </td>
                   <td className="px-3 py-2 text-neutral-600">
-                    {o.assignedTo?.name ?? "-"}
+                    {o.status === "INSTALLED" ? (
+                      <span className="font-medium text-neutral-900">
+                        {o.assignedTo?.name ?? "-"}
+                      </span>
+                    ) : (
+                      <select
+                        value={o.assignedTo?.id ?? ""}
+                        onChange={(e) => handleAssign(o.id, e.target.value)}
+                        className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                      >
+                        <option value="">Unassigned</option>
+                        {staffUsers.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-neutral-600">
+                    {o.installation?.customerName ?? "-"}
+                    {o.installation?.customerAddress && (
+                      <span className="block text-xs text-neutral-600">
+                        {o.installation.customerAddress}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-neutral-600">
+                    {o.installation?.installedAt
+                      ? new Date(o.installation.installedAt).toLocaleDateString()
+                      : "-"}
                   </td>
                   <td className="px-3 py-2 text-neutral-600">
                     {o.addedBy?.name ?? "-"}
@@ -107,7 +158,7 @@ export default function StockTable({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-neutral-600">
+                  <td colSpan={9} className="px-3 py-6 text-center text-neutral-600">
                     No ONUs found.
                   </td>
                 </tr>

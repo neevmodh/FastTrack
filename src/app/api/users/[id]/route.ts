@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
@@ -42,4 +43,59 @@ export async function PATCH(
   });
 
   return NextResponse.json(updated);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { user, error } = await requireUser(["ADMIN"]);
+  if (error) return error;
+
+  const { id } = await params;
+
+  if (id === user.id) {
+    return NextResponse.json(
+      { error: "You can't delete your own account." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { name: true, email: true },
+  });
+  if (!target) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  try {
+    await prisma.user.delete({ where: { id } });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2003"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This user has installation or complaint history and can't be deleted — deactivate them instead to preserve those records.",
+        },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: "USER_DELETED",
+      entityType: "User",
+      entityId: id,
+      details: `Deleted ${target.name} (${target.email})`,
+    },
+  });
+
+  return NextResponse.json({ ok: true });
 }

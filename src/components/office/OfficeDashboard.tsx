@@ -80,7 +80,12 @@ export default function OfficeDashboard({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {tab === "stock" && (
-        <StockTable onus={onus} loading={loading} onRefresh={loadStock} />
+        <StockTable
+          onus={onus}
+          staffUsers={users.filter((u) => u.role === "STAFF")}
+          loading={loading}
+          onRefresh={loadStock}
+        />
       )}
       {tab === "add" && (
         <AddStockForm

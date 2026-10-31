@@ -71,6 +71,8 @@ function UserRow({
   const [role, setRole] = useState<Role>(user.role);
   const [ip, setIp] = useState(user.assignedIp ?? "");
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function save() {
     setSaving(true);
@@ -89,6 +91,27 @@ function UserRow({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !user.active }),
     });
+    onRefresh();
+  }
+
+  async function handleDelete() {
+    if (
+      !confirm(
+        `Permanently delete ${user.name} (${user.email})? This can't be undone.`
+      )
+    )
+      return;
+
+    setDeleting(true);
+    setDeleteError("");
+    const res = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
+    setDeleting(false);
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setDeleteError(body?.error ?? "Failed to delete user.");
+      return;
+    }
     onRefresh();
   }
 
@@ -141,13 +164,27 @@ function UserRow({
       </td>
       {isAdmin && (
         <td className="px-3 py-2 text-right">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="text-xs text-neutral-700 hover:underline disabled:opacity-50"
-          >
-            Save
-          </button>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="text-xs text-neutral-700 hover:underline disabled:opacity-50"
+            >
+              Save
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="text-xs text-red-600 hover:underline disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+          {deleteError && (
+            <p className="mt-1 max-w-xs text-right text-xs text-red-600">
+              {deleteError}
+            </p>
+          )}
         </td>
       )}
     </tr>
