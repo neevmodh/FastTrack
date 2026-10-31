@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { AppUser, Onu } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -112,9 +113,16 @@ export default function StockTable({
                   </td>
                   <td className="px-3 py-2 text-neutral-600">
                     {o.status === "INSTALLED" ? (
-                      <span className="font-medium text-neutral-900">
-                        {o.assignedTo?.name ?? "-"}
-                      </span>
+                      o.assignedTo ? (
+                        <Link
+                          href={`/office/users/${o.assignedTo.id}`}
+                          className="font-medium text-[var(--office-accent-dark)] hover:underline"
+                        >
+                          {o.assignedTo.name}
+                        </Link>
+                      ) : (
+                        "-"
+                      )
                     ) : (
                       <select
                         value={o.assignedTo?.id ?? ""}

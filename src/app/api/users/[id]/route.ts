@@ -12,6 +12,86 @@ const updateSchema = z.object({
   assignedIp: z.string().optional().nullable(),
 });
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { error } = await requireUser(["OFFICE", "ADMIN"]);
+  if (error) return error;
+
+  const { id } = await params;
+  const { searchParams } = new URL(req.url);
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+
+  const dateFilter =
+    from || to
+      ? {
+          installedAt: {
+            ...(from ? { gte: new Date(from) } : {}),
+            // include the whole "to" day
+            ...(to ? { lt: new Date(new Date(to).getTime() + 86400000) } : {}),
+          },
+        }
+      : {};
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      active: true,
+      assignedIp: true,
+      createdAt: true,
+    },
+  });
+  if (!target) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const [installations, currentlyAssigned, complaints, addedOnus] =
+    await Promise.all([
+      prisma.installation.findMany({
+        where: { staffId: id, ...dateFilter },
+        include: {
+          onu: {
+            select: {
+              id: true,
+              companyName: true,
+              macAddress: true,
+              model: true,
+              serialNumber: true,
+            },
+          },
+        },
+        orderBy: { installedAt: "desc" },
+      }),
+      prisma.onu.findMany({
+        where: { assignedToId: id, status: { not: "INSTALLED" } },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.complaint.findMany({
+        where: { reportedById: id },
+        include: {
+          onu: { select: { id: true, companyName: true, macAddress: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.onu.count({ where: { addedById: id } }),
+    ]);
+
+  return NextResponse.json({
+    user: target,
+    installations,
+    currentlyAssigned,
+    complaints,
+    addedOnusCount: addedOnus,
+  });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

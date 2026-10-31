@@ -57,3 +57,27 @@ export type AuditLogEntry = {
   createdAt: string;
   user?: { id: string; name: string; role: Role } | null;
 };
+
+export type InstallationRecord = {
+  id: string;
+  customerName?: string | null;
+  customerAddress?: string | null;
+  manualOverride: boolean;
+  notes?: string | null;
+  installedAt: string;
+  onu: {
+    id: string;
+    companyName: string;
+    macAddress: string;
+    model?: string | null;
+    serialNumber?: string | null;
+  };
+};
+
+export type UserDetail = {
+  user: AppUser;
+  installations: InstallationRecord[];
+  currentlyAssigned: Onu[];
+  complaints: Complaint[];
+  addedOnusCount: number;
+};

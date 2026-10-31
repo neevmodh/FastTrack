@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { AppUser, Role } from "@/lib/types";
 
 export default function UsersPanel({
@@ -117,7 +118,14 @@ function UserRow({
 
   return (
     <tr className="border-b border-neutral-100 last:border-0">
-      <td className="px-3 py-2 font-medium text-neutral-900">{user.name}</td>
+      <td className="px-3 py-2 font-medium">
+        <Link
+          href={`/office/users/${user.id}`}
+          className="text-[var(--office-accent-dark)] hover:underline"
+        >
+          {user.name}
+        </Link>
+      </td>
       <td className="px-3 py-2 text-neutral-600">{user.email}</td>
       <td className="px-3 py-2">
         {isAdmin ? (
