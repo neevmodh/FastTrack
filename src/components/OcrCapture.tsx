@@ -23,6 +23,7 @@ export default function OcrCapture({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [fellBackToOnDevice, setFellBackToOnDevice] = useState(false);
   const [fields, setFields] = useState<OcrCaptureValue>({
     companyName: "",
     macAddress: "",
@@ -42,21 +43,13 @@ export default function OcrCapture({
     setPreviewUrl(URL.createObjectURL(file));
     setProgress(0);
 
-    const processed = await preprocessForOcr(file).catch(() => file);
-    const result = await runOcr(processed, setProgress);
-    setProgress(null);
-
-    update({
-      companyName: result.companyName ?? fields.companyName,
-      macAddress: result.macAddress ?? fields.macAddress,
-      serialNumber: result.serialNumber ?? fields.serialNumber,
-      ponSerial: result.ponSerial ?? fields.ponSerial,
-      model: result.model ?? fields.model,
-      specSummary: result.specSummary ?? fields.specSummary,
-    });
-
+    // Upload the photo and ask the vision-LLM OCR endpoint to read it, in
+    // parallel. That endpoint (Gemini, falling back to Groq) reads the
+    // image holistically and is far more accurate than classical OCR on
+    // these labels — barcodes next to text and glare routinely defeat
+    // pixel-level OCR but don't trip up a vision model.
     setUploading(true);
-    try {
+    const uploadPromise = (async () => {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: form });
@@ -64,9 +57,43 @@ export default function OcrCapture({
         const { url } = await res.json();
         update({ photoUrl: url });
       }
-    } finally {
-      setUploading(false);
+    })().finally(() => setUploading(false));
+
+    let usedFallback = false;
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/ocr", { method: "POST", body: form });
+      if (!res.ok) throw new Error(await res.text());
+      const result = await res.json();
+
+      update({
+        companyName: result.companyName ?? fields.companyName,
+        macAddress: result.macAddress ?? fields.macAddress,
+        serialNumber: result.serialNumber ?? fields.serialNumber,
+        ponSerial: result.ponSerial ?? fields.ponSerial,
+        model: result.model ?? fields.model,
+        specSummary: result.specSummary ?? fields.specSummary,
+      });
+    } catch (err) {
+      usedFallback = true;
+      console.warn("Vision OCR unavailable, falling back to on-device OCR", err);
+      const processed = await preprocessForOcr(file).catch(() => file);
+      const result = await runOcr(processed, setProgress);
+
+      update({
+        companyName: result.companyName ?? fields.companyName,
+        macAddress: result.macAddress ?? fields.macAddress,
+        serialNumber: result.serialNumber ?? fields.serialNumber,
+        ponSerial: result.ponSerial ?? fields.ponSerial,
+        model: result.model ?? fields.model,
+        specSummary: result.specSummary ?? fields.specSummary,
+      });
     }
+
+    setProgress(null);
+    setFellBackToOnDevice(usedFallback);
+    await uploadPromise;
   }
 
   return (
@@ -102,7 +129,11 @@ export default function OcrCapture({
       )}
 
       {progress !== null && (
-        <p className="text-sm text-neutral-500">Reading label... {progress}%</p>
+        <p className="text-sm text-neutral-500">
+          {fellBackToOnDevice
+            ? `Cloud OCR unavailable, reading on-device... ${progress}%`
+            : "Reading label..."}
+        </p>
       )}
       {uploading && <p className="text-sm text-neutral-500">Uploading photo...</p>}
 
