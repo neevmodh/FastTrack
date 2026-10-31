@@ -1,4 +1,5 @@
 import Tesseract from "tesseract.js";
+import { recognizeWithPaddle } from "@/lib/ocr-paddle";
 
 export type OcrResult = {
   rawText: string;
@@ -39,10 +40,10 @@ const KNOWN_COMPANIES = [
 const SPEC_LINE_REGEX =
   /\b\d+\s*(?:GE|GIG|PON|LAN|FXS|POTS|PORT|WiFi|USB)\b/i;
 
-export async function runOcr(
+async function recognizeWithTesseract(
   imageSource: File | Blob | string,
   onProgress?: (p: number) => void
-): Promise<OcrResult> {
+): Promise<string> {
   const { data } = await Tesseract.recognize(imageSource, "eng", {
     logger: (m) => {
       if (m.status === "recognizing text" && onProgress) {
@@ -50,8 +51,10 @@ export async function runOcr(
       }
     },
   });
+  return data.text;
+}
 
-  const rawText = data.text;
+function buildResult(rawText: string): OcrResult {
   return {
     rawText,
     macAddress: extractMac(rawText),
@@ -60,6 +63,47 @@ export async function runOcr(
     ponSerial: extractPonSerial(rawText),
     model: extractModel(rawText),
     specSummary: extractSpecSummary(rawText),
+  };
+}
+
+// Company name and MAC address are the two fields that matter most, so
+// this tries PaddleOCR first (its text-detection network handles text
+// printed right next to a barcode — the common layout on ONU labels — far
+// better than Tesseract did in testing). If PaddleOCR is slow, unsupported
+// (no WebGL), or still misses the MAC or company after that pass, it falls
+// back to Tesseract and fills in whatever PaddleOCR didn't find.
+export async function runOcr(
+  imageSource: File | Blob | string,
+  onProgress?: (p: number) => void
+): Promise<OcrResult> {
+  let paddleResult: OcrResult | null = null;
+
+  try {
+    const paddleText = await recognizeWithPaddle(imageSource);
+    paddleResult = buildResult(paddleText);
+  } catch (err) {
+    console.warn("PaddleOCR unavailable, falling back to Tesseract", err);
+  }
+
+  const needsFallback =
+    !paddleResult || !paddleResult.macAddress || !paddleResult.companyName;
+
+  if (!needsFallback) return paddleResult!;
+
+  const tesseractText = await recognizeWithTesseract(imageSource, onProgress);
+  const tesseractResult = buildResult(tesseractText);
+
+  if (!paddleResult) return tesseractResult;
+
+  // Merge: prefer whichever engine found each field, preferring PaddleOCR.
+  return {
+    rawText: paddleResult.rawText + "\n" + tesseractResult.rawText,
+    macAddress: paddleResult.macAddress ?? tesseractResult.macAddress,
+    companyName: paddleResult.companyName ?? tesseractResult.companyName,
+    serialNumber: paddleResult.serialNumber ?? tesseractResult.serialNumber,
+    ponSerial: paddleResult.ponSerial ?? tesseractResult.ponSerial,
+    model: paddleResult.model ?? tesseractResult.model,
+    specSummary: paddleResult.specSummary ?? tesseractResult.specSummary,
   };
 }
 
