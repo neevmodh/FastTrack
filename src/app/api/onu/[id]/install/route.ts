@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
 const installSchema = z.object({
+  customerId: z.string().optional(),
   customerName: z.string().optional(),
   customerAddress: z.string().optional(),
   photoUrl: z.string().url().optional(),

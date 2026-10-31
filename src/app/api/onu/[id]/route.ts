@@ -31,8 +31,16 @@ export async function GET(
     include: {
       addedBy: { select: { id: true, name: true } },
       assignedTo: { select: { id: true, name: true } },
-      installation: true,
-      complaints: true,
+      installation: {
+        include: {
+          staff: { select: { id: true, name: true } },
+          customer: true,
+        },
+      },
+      complaints: {
+        include: { reportedBy: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 

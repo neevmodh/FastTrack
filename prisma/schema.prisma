@@ -74,18 +74,33 @@ model Onu {
   complaints    Complaint[]
 }
 
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String?
+  address       String?
+  email         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  installations Installation[]
+}
+
 model Installation {
-  id               String   @id @default(cuid())
-  onuId            String   @unique
-  onu              Onu      @relation(fields: [onuId], references: [id])
+  id               String    @id @default(cuid())
+  onuId            String    @unique
+  onu              Onu       @relation(fields: [onuId], references: [id])
   staffId          String
-  staff            User     @relation(fields: [staffId], references: [id])
+  staff            User      @relation(fields: [staffId], references: [id])
+  customerId       String?
+  customer         Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerName     String?
   customerAddress  String?
   photoUrl         String?
-  manualOverride   Boolean  @default(false)
+  manualOverride   Boolean   @default(false)
   notes            String?
-  installedAt      DateTime @default(now())
+  installedAt      DateTime  @default(now())
 }
 
 model Complaint {

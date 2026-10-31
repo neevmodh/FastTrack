@@ -93,7 +93,12 @@ export default function StockTable({
               {filtered.map((o) => (
                 <tr key={o.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-3 py-2 font-medium text-neutral-900">
-                    {o.companyName}
+                    <Link
+                      href={`/office/onu/${o.id}`}
+                      className="text-[var(--office-accent-dark)] hover:underline"
+                    >
+                      {o.companyName}
+                    </Link>
                     {o.model && (
                       <span className="block text-xs text-neutral-600">{o.model}</span>
                     )}

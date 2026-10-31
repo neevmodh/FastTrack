@@ -81,3 +81,31 @@ export type UserDetail = {
   complaints: Complaint[];
   addedOnusCount: number;
 };
+
+export type Customer = {
+  id: string;
+  name: string;
+  phone?: string | null;
+  address?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  _count?: { installations: number };
+};
+
+export type OnuDetail = Omit<Onu, "installation" | "complaints"> & {
+  ipAddress?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  installation: {
+    id: string;
+    customerName?: string | null;
+    customerAddress?: string | null;
+    manualOverride: boolean;
+    notes?: string | null;
+    installedAt: string;
+    staff: { id: string; name: string };
+    customer?: Customer | null;
+  } | null;
+  complaints: (Complaint & { reportedBy: { id: string; name: string } })[];
+};

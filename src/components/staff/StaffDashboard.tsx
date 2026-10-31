@@ -5,8 +5,9 @@ import type { Onu } from "@/lib/types";
 import ScanAndInstall from "./ScanAndInstall";
 import MyOnusList from "./MyOnusList";
 import ReportComplaint from "./ReportComplaint";
+import CustomersPanel from "@/components/shared/CustomersPanel";
 
-type Tab = "scan" | "mine" | "report";
+type Tab = "scan" | "mine" | "customers" | "report";
 
 export default function StaffDashboard({
   currentUserId,
@@ -34,6 +35,7 @@ export default function StaffDashboard({
   const tabs: { key: Tab; label: string }[] = [
     { key: "scan", label: `Available stock (${availableStock.length})` },
     { key: "mine", label: `My ONUs (${myOnus.length})` },
+    { key: "customers", label: "Customers" },
     { key: "report", label: "Report issue" },
   ];
 
@@ -66,6 +68,7 @@ export default function StaffDashboard({
         />
       )}
       {tab === "mine" && <MyOnusList onus={myOnus} loading={loading} />}
+      {tab === "customers" && <CustomersPanel accent="staff" />}
       {tab === "report" && <ReportComplaint onus={myOnus} />}
     </div>
   );

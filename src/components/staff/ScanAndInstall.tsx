@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Onu } from "@/lib/types";
+import type { Customer, Onu } from "@/lib/types";
 import OcrCapture, { OcrCaptureValue } from "@/components/OcrCapture";
+import CustomerPicker from "@/components/shared/CustomerPicker";
 
 export default function ScanAndInstall({
   availableStock,
@@ -15,8 +16,7 @@ export default function ScanAndInstall({
 }) {
   const [scanned, setScanned] = useState<OcrCaptureValue | null>(null);
   const [selectedId, setSelectedId] = useState<string>("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [notes, setNotes] = useState("");
   const [manualOverride, setManualOverride] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,8 +50,9 @@ export default function ScanAndInstall({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName: customerName || undefined,
-        customerAddress: customerAddress || undefined,
+        customerId: customer?.id || undefined,
+        customerName: customer?.name || undefined,
+        customerAddress: customer?.address || undefined,
         photoUrl: scanned?.photoUrl,
         manualOverride,
         notes: notes || undefined,
@@ -68,8 +69,7 @@ export default function ScanAndInstall({
     setSuccess("Installation recorded.");
     setScanned(null);
     setSelectedId("");
-    setCustomerName("");
-    setCustomerAddress("");
+    setCustomer(null);
     setNotes("");
     setManualOverride(false);
     onRefresh();
@@ -146,18 +146,12 @@ export default function ScanAndInstall({
           3. Installation details
         </h2>
         <div className="space-y-3">
-          <input
-            placeholder="Customer name (optional)"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          />
-          <input
-            placeholder="Customer address (optional)"
-            value={customerAddress}
-            onChange={(e) => setCustomerAddress(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Customer (optional)
+            </label>
+            <CustomerPicker value={customer} onChange={setCustomer} />
+          </div>
           <textarea
             placeholder="Notes (optional)"
             value={notes}

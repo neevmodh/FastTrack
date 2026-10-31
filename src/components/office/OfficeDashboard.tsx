@@ -7,8 +7,9 @@ import StockTable from "./StockTable";
 import UsersPanel from "./UsersPanel";
 import ComplaintsPanel from "./ComplaintsPanel";
 import LogsPanel from "./LogsPanel";
+import CustomersPanel from "@/components/shared/CustomersPanel";
 
-type Tab = "stock" | "add" | "users" | "complaints" | "logs";
+type Tab = "stock" | "add" | "users" | "customers" | "complaints" | "logs";
 
 export default function OfficeDashboard({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<Tab>("stock");
@@ -54,6 +55,7 @@ export default function OfficeDashboard({ isAdmin }: { isAdmin: boolean }) {
     { key: "stock", label: `Stock (${onus.length})` },
     { key: "add", label: "Add ONU" },
     { key: "users", label: "Users" },
+    { key: "customers", label: "Customers" },
     { key: "complaints", label: `Complaints (${complaints.filter((c) => c.status !== "RESOLVED").length})` },
     { key: "logs", label: "Activity log" },
   ];
@@ -98,6 +100,7 @@ export default function OfficeDashboard({ isAdmin }: { isAdmin: boolean }) {
       {tab === "users" && (
         <UsersPanel users={users} isAdmin={isAdmin} onRefresh={loadUsers} />
       )}
+      {tab === "customers" && <CustomersPanel accent="office" />}
       {tab === "complaints" && (
         <ComplaintsPanel complaints={complaints} onRefresh={loadComplaints} />
       )}
