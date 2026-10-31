@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Customer } from "@/lib/types";
 import { toCsv, downloadCsv } from "@/lib/csv-export";
+import { extractErrorMessage } from "@/lib/api-error";
 
 type ImportResult = {
   total: number;
@@ -349,7 +350,7 @@ function AddCustomerForm({
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error?.toString?.() ?? "Failed to add customer.");
+      setError(extractErrorMessage(body, "Failed to add customer."));
       return;
     }
     onCreated();

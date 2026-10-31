@@ -4,18 +4,26 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
+// Empty-string form fields ("" from an untouched optional input) must be
+// treated the same as an omitted field — z.string().min(1).optional() only
+// skips validation for `undefined`, not for "", so without this an empty
+// optional field fails validation instead of being ignored.
+const blankToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? undefined : v;
+const optionalText = () => z.preprocess(blankToUndefined, z.string().trim().min(1).optional());
+
 // customerId is a free-text external reference (account number, code,
 // whatever the source system uses) — no format restriction beyond "not
 // blank". At least one of customerId/name must be given so a record is
 // identifiable by something.
 const createSchema = z
   .object({
-    customerId: z.string().trim().min(1).optional(),
-    name: z.string().trim().min(1).optional(),
-    phone: z.string().optional(),
-    address: z.string().optional(),
-    email: z.string().email().optional().or(z.literal("")),
-    notes: z.string().optional(),
+    customerId: optionalText(),
+    name: optionalText(),
+    phone: optionalText(),
+    address: optionalText(),
+    email: z.preprocess(blankToUndefined, z.string().email().optional()),
+    notes: optionalText(),
   })
   .refine((d) => d.customerId || d.name, {
     message: "Provide at least a Customer ID or a name.",
@@ -61,16 +69,7 @@ export async function POST(req: NextRequest) {
 
   let customer;
   try {
-    customer = await prisma.customer.create({
-      data: {
-        customerId: parsed.data.customerId || undefined,
-        name: parsed.data.name || undefined,
-        phone: parsed.data.phone || undefined,
-        address: parsed.data.address || undefined,
-        email: parsed.data.email || undefined,
-        notes: parsed.data.notes || undefined,
-      },
-    });
+    customer = await prisma.customer.create({ data: parsed.data });
   } catch (err) {
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&

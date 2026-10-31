@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Customer, Onu } from "@/lib/types";
 import OcrCapture, { OcrCaptureValue } from "@/components/OcrCapture";
 import CustomerPicker from "@/components/shared/CustomerPicker";
+import { extractErrorMessage } from "@/lib/api-error";
 
 export default function ScanAndInstall({
   availableStock,
@@ -62,7 +63,7 @@ export default function ScanAndInstall({
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error?.toString?.() ?? "Failed to record installation.");
+      setError(extractErrorMessage(body, "Failed to record installation."));
       return;
     }
 

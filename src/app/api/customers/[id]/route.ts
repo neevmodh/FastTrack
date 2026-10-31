@@ -4,13 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
+// "" from a cleared form field means "clear this value" here, so it maps to
+// null (not undefined/omitted) — but must bypass min(1)/email validation
+// rather than fail it, the same empty-string issue as the create route.
+const blankToNull = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? null : v;
+const nullableText = () => z.preprocess(blankToNull, z.string().trim().min(1).optional().nullable());
+
 const updateSchema = z.object({
-  customerId: z.string().trim().min(1).optional().nullable(),
-  name: z.string().min(1).optional().nullable(),
-  phone: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  email: z.string().email().optional().nullable().or(z.literal("")),
-  notes: z.string().optional().nullable(),
+  customerId: nullableText(),
+  name: nullableText(),
+  phone: nullableText(),
+  address: nullableText(),
+  email: z.preprocess(blankToNull, z.string().email().optional().nullable()),
+  notes: nullableText(),
 });
 
 export async function PATCH(
@@ -31,10 +38,7 @@ export async function PATCH(
   try {
     updated = await prisma.customer.update({
       where: { id },
-      data: {
-        ...parsed.data,
-        email: parsed.data.email || undefined,
-      },
+      data: parsed.data,
     });
   } catch (err) {
     if (

@@ -87,18 +87,6 @@ export default function StockTable({
     if (res.ok) onRefresh();
   }
 
-  async function handleAssign(id: string, staffId: string) {
-    await fetch(`/api/onu/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assignedToId: staffId || null,
-        status: staffId ? "ASSIGNED" : "IN_STOCK",
-      }),
-    });
-    onRefresh();
-  }
-
   function handleExport() {
     const csv = toCsv(
       filtered.map((o) => ({
@@ -298,30 +286,15 @@ export default function StockTable({
                     </span>
                   </td>
                   <td className="px-3 py-2 text-neutral-600">
-                    {o.status === "INSTALLED" ? (
-                      o.assignedTo ? (
-                        <Link
-                          href={`/office/users/${o.assignedTo.id}`}
-                          className="font-medium text-[var(--office-accent-dark)] hover:underline"
-                        >
-                          {o.assignedTo.name}
-                        </Link>
-                      ) : (
-                        "-"
-                      )
-                    ) : (
-                      <select
-                        value={o.assignedTo?.id ?? ""}
-                        onChange={(e) => handleAssign(o.id, e.target.value)}
-                        className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                    {o.assignedTo ? (
+                      <Link
+                        href={`/office/users/${o.assignedTo.id}`}
+                        className="font-medium text-[var(--office-accent-dark)] hover:underline"
                       >
-                        <option value="">Unassigned</option>
-                        {staffUsers.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                        {o.assignedTo.name}
+                      </Link>
+                    ) : (
+                      "-"
                     )}
                   </td>
                   <td className="px-3 py-2 text-neutral-600">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { AppUser, Role } from "@/lib/types";
+import { extractErrorMessage } from "@/lib/api-error";
 
 export default function UsersPanel({
   users,
@@ -224,7 +225,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error?.toString?.() ?? "Failed to create user.");
+      setError(extractErrorMessage(body, "Failed to create user."));
       return;
     }
     onCreated();

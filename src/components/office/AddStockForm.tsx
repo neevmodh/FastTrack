@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import OcrCapture, { OcrCaptureValue } from "@/components/OcrCapture";
+import { extractErrorMessage } from "@/lib/api-error";
 
 export default function AddStockForm({ onCreated }: { onCreated: () => void }) {
   const [value, setValue] = useState<OcrCaptureValue>({
@@ -42,7 +43,7 @@ export default function AddStockForm({ onCreated }: { onCreated: () => void }) {
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error?.toString?.() ?? "Failed to add ONU.");
+      setError(extractErrorMessage(body, "Failed to add ONU."));
       return;
     }
 
