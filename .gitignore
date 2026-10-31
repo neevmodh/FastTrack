@@ -49,3 +49,6 @@ next-env.d.ts
 .windsurf/
 .claude/skills/
 skills-lock.json
+
+# tesseract cache from local testing
+eng.traineddata

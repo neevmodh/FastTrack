@@ -2,12 +2,16 @@
 
 import { useRef, useState } from "react";
 import { runOcr } from "@/lib/ocr";
+import { preprocessForOcr } from "@/lib/image-preprocess";
 
 export type OcrCaptureValue = {
   photoUrl?: string;
   companyName: string;
   macAddress: string;
   serialNumber: string;
+  ponSerial: string;
+  model: string;
+  specSummary: string;
 };
 
 export default function OcrCapture({
@@ -23,6 +27,9 @@ export default function OcrCapture({
     companyName: "",
     macAddress: "",
     serialNumber: "",
+    ponSerial: "",
+    model: "",
+    specSummary: "",
   });
 
   function update(partial: Partial<OcrCaptureValue>) {
@@ -35,13 +42,17 @@ export default function OcrCapture({
     setPreviewUrl(URL.createObjectURL(file));
     setProgress(0);
 
-    const result = await runOcr(file, setProgress);
+    const processed = await preprocessForOcr(file).catch(() => file);
+    const result = await runOcr(processed, setProgress);
     setProgress(null);
 
     update({
       companyName: result.companyName ?? fields.companyName,
       macAddress: result.macAddress ?? fields.macAddress,
       serialNumber: result.serialNumber ?? fields.serialNumber,
+      ponSerial: result.ponSerial ?? fields.ponSerial,
+      model: result.model ?? fields.model,
+      specSummary: result.specSummary ?? fields.specSummary,
     });
 
     setUploading(true);
@@ -102,6 +113,11 @@ export default function OcrCapture({
           onChange={(v) => update({ companyName: v })}
         />
         <Field
+          label="Model"
+          value={fields.model}
+          onChange={(v) => update({ model: v })}
+        />
+        <Field
           label="MAC address"
           value={fields.macAddress}
           onChange={(v) => update({ macAddress: v })}
@@ -110,6 +126,16 @@ export default function OcrCapture({
           label="Serial number"
           value={fields.serialNumber}
           onChange={(v) => update({ serialNumber: v })}
+        />
+        <Field
+          label="PON / GPON serial"
+          value={fields.ponSerial}
+          onChange={(v) => update({ ponSerial: v })}
+        />
+        <Field
+          label="Spec summary (ports, etc.)"
+          value={fields.specSummary}
+          onChange={(v) => update({ specSummary: v })}
         />
       </div>
       <p className="text-xs text-neutral-400">

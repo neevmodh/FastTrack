@@ -8,6 +8,9 @@ export default function AddStockForm({ onCreated }: { onCreated: () => void }) {
     companyName: "",
     macAddress: "",
     serialNumber: "",
+    ponSerial: "",
+    model: "",
+    specSummary: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +32,9 @@ export default function AddStockForm({ onCreated }: { onCreated: () => void }) {
         companyName: value.companyName,
         macAddress: value.macAddress,
         serialNumber: value.serialNumber || undefined,
+        ponSerial: value.ponSerial || undefined,
+        model: value.model || undefined,
+        notes: value.specSummary || undefined,
         photoUrl: value.photoUrl,
       }),
     });
