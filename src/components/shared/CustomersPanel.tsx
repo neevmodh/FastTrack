@@ -72,21 +72,17 @@ export default function CustomersPanel({
   function handleExport() {
     const csv = toCsv(
       filtered.map((c) => ({
-        customerId: c.customerId ?? "",
-        name: c.name ?? "",
-        phone: c.phone ?? "",
-        address: c.address ?? "",
-        email: c.email ?? "",
+        customerId: c.customerId,
         installs: c._count?.installations ?? 0,
         createdAt: c.createdAt,
       })),
-      ["customerId", "name", "phone", "address", "email", "installs", "createdAt"]
+      ["customerId", "installs", "createdAt"]
     );
     downloadCsv(`customers-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   }
 
   async function handleDelete(id: string, label: string) {
-    if (!confirm(`Delete customer "${label}"? Past installation records keep a snapshot of their details.`))
+    if (!confirm(`Delete customer "${label}"? Past installation records keep a snapshot of the ID.`))
       return;
     const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
     if (res.ok) load();
@@ -116,7 +112,7 @@ export default function CustomersPanel({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
-            placeholder="Search by Customer ID, name, phone..."
+            placeholder="Search by Customer ID..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="w-64 rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
@@ -231,7 +227,7 @@ export default function CustomersPanel({
         <div className="mb-3 rounded-md bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
           <p>
             Imported {importResult.total} row(s): {importResult.created} created,{" "}
-            {importResult.updated} updated, {importResult.skipped} skipped.
+            {importResult.skipped} skipped.
           </p>
           {importResult.errors.length > 0 && (
             <ul className="mt-1 list-inside list-disc text-xs text-neutral-600">
@@ -263,9 +259,6 @@ export default function CustomersPanel({
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-600">
                 <th className="px-3 py-2">Customer ID</th>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Phone</th>
-                <th className="px-3 py-2">Address</th>
                 <th className="px-3 py-2">Installs</th>
                 {canManage && <th className="px-3 py-2"></th>}
               </tr>
@@ -273,23 +266,16 @@ export default function CustomersPanel({
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-neutral-100 last:border-0">
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-700">
-                    {c.customerId ?? "-"}
+                  <td className="px-3 py-2 font-mono text-sm font-medium text-neutral-900">
+                    {c.customerId}
                   </td>
-                  <td className="px-3 py-2 font-medium text-neutral-900">
-                    {c.name ?? "-"}
-                  </td>
-                  <td className="px-3 py-2 text-neutral-600">{c.phone ?? "-"}</td>
-                  <td className="px-3 py-2 text-neutral-600">{c.address ?? "-"}</td>
                   <td className="px-3 py-2 text-neutral-600">
                     {c._count?.installations ?? 0}
                   </td>
                   {canManage && (
                     <td className="px-3 py-2 text-right">
                       <button
-                        onClick={() =>
-                          handleDelete(c.id, c.name ?? c.customerId ?? c.id)
-                        }
+                        onClick={() => handleDelete(c.id, c.customerId)}
                         className="text-xs text-red-600 hover:underline"
                       >
                         Delete
@@ -301,7 +287,7 @@ export default function CustomersPanel({
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={canManage ? 6 : 5}
+                    colSpan={canManage ? 3 : 2}
                     className="px-3 py-6 text-center text-neutral-600"
                   >
                     No customers found.
@@ -323,28 +309,22 @@ function AddCustomerForm({
   accentVar: string;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({
-    customerId: "",
-    name: "",
-    phone: "",
-    address: "",
-    email: "",
-  });
+  const [customerId, setCustomerId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.customerId.trim() && !form.name.trim()) {
-      setError("Provide at least a Customer ID or a name.");
+    if (!customerId.trim()) {
+      setError("Customer ID is required.");
       return;
     }
     setSubmitting(true);
     const res = await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ customerId }),
     });
     setSubmitting(false);
 
@@ -353,6 +333,7 @@ function AddCustomerForm({
       setError(extractErrorMessage(body, "Failed to add customer."));
       return;
     }
+    setCustomerId("");
     onCreated();
   }
 
@@ -362,34 +343,11 @@ function AddCustomerForm({
       className="mb-3 grid max-w-md grid-cols-1 gap-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
       <input
-        placeholder="Customer ID (account number, code, etc. — optional)"
-        value={form.customerId}
-        onChange={(e) => setForm({ ...form, customerId: e.target.value })}
+        placeholder="Customer ID (e.g. karam, account number, code...)"
+        value={customerId}
+        onChange={(e) => setCustomerId(e.target.value)}
         className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
-      />
-      <input
-        placeholder="Customer name (optional)"
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
-      />
-      <input
-        placeholder="Phone (optional)"
-        value={form.phone}
-        onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
-      />
-      <input
-        placeholder="Address (optional)"
-        value={form.address}
-        onChange={(e) => setForm({ ...form, address: e.target.value })}
-        className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
-      />
-      <input
-        placeholder="Email (optional)"
-        value={form.email}
-        onChange={(e) => setForm({ ...form, email: e.target.value })}
-        className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        autoFocus
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button

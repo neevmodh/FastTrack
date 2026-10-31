@@ -23,8 +23,7 @@ export type Onu = {
   assignedTo?: { id: string; name: string } | null;
   installation?: {
     id: string;
-    customerName?: string | null;
-    customerAddress?: string | null;
+    customerIdText?: string | null;
     installedAt: string;
     manualOverride: boolean;
   } | null;
@@ -60,8 +59,7 @@ export type AuditLogEntry = {
 
 export type InstallationRecord = {
   id: string;
-  customerName?: string | null;
-  customerAddress?: string | null;
+  customerIdText?: string | null;
   manualOverride: boolean;
   notes?: string | null;
   installedAt: string;
@@ -84,12 +82,7 @@ export type UserDetail = {
 
 export type Customer = {
   id: string;
-  customerId?: string | null;
-  name?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  email?: string | null;
-  notes?: string | null;
+  customerId: string;
   createdAt: string;
   _count?: { installations: number };
 };
@@ -100,8 +93,7 @@ export type OnuDetail = Omit<Onu, "installation" | "complaints"> & {
   updatedAt?: string;
   installation: {
     id: string;
-    customerName?: string | null;
-    customerAddress?: string | null;
+    customerIdText?: string | null;
     manualOverride: boolean;
     notes?: string | null;
     installedAt: string;

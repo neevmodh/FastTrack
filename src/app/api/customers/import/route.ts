@@ -4,61 +4,31 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { parseCsv } from "@/lib/csv";
 
-type Row = Record<string, string>;
-
 // Accepts common header variants (any case, spaces/underscores/hyphens
-// ignored) and maps them to our fields.
-const HEADER_ALIASES: Record<string, keyof typeof FIELD_KEYS> = {
-  customerid: "customerId",
-  custid: "customerId",
-  accountid: "customerId",
-  accountnumber: "customerId",
-  account: "customerId",
-  id: "customerId",
-  name: "name",
-  customername: "name",
-  fullname: "name",
-  phone: "phone",
-  mobile: "phone",
-  contact: "phone",
-  phonenumber: "phone",
-  address: "address",
-  location: "address",
-  email: "email",
-  emailaddress: "email",
-  notes: "notes",
-  note: "notes",
-  remarks: "notes",
-};
-
-const FIELD_KEYS = {
-  customerId: true,
-  name: true,
-  phone: true,
-  address: true,
-  email: true,
-  notes: true,
-} as const;
+// ignored) that all mean "the customer ID" — a Customer has no other field.
+const CUSTOMER_ID_HEADERS = new Set([
+  "customerid",
+  "custid",
+  "accountid",
+  "accountnumber",
+  "account",
+  "id",
+]);
 
 function normalizeHeader(h: string): string {
   return h.trim().toLowerCase().replace(/[\s_-]+/g, "");
 }
 
-function rowsFromCsv(text: string): Row[] {
+function idsFromCsv(text: string): string[] {
   const table = parseCsv(text);
   if (table.length === 0) return [];
   const headers = table[0].map(normalizeHeader);
-  return table.slice(1).map((cells) => {
-    const row: Row = {};
-    headers.forEach((h, i) => {
-      const field = HEADER_ALIASES[h];
-      if (field && cells[i] !== undefined) row[field] = cells[i].trim();
-    });
-    return row;
-  });
+  const col = headers.findIndex((h) => CUSTOMER_ID_HEADERS.has(h));
+  if (col === -1) return [];
+  return table.slice(1).map((cells) => (cells[col] ?? "").trim());
 }
 
-function rowsFromJson(text: string): Row[] {
+function idsFromJson(text: string): string[] {
   const parsed = JSON.parse(text);
   const records: unknown[] = Array.isArray(parsed)
     ? parsed
@@ -67,14 +37,15 @@ function rowsFromJson(text: string): Row[] {
       : [parsed];
 
   return records.map((rec) => {
-    const row: Row = {};
     if (rec && typeof rec === "object") {
       for (const [key, value] of Object.entries(rec as Record<string, unknown>)) {
-        const field = HEADER_ALIASES[normalizeHeader(key)];
-        if (field && value != null) row[field] = String(value).trim();
+        if (CUSTOMER_ID_HEADERS.has(normalizeHeader(key)) && value != null) {
+          return String(value).trim();
+        }
       }
     }
-    return row;
+    // A bare array of strings (["karam", "priya", ...]) is also accepted.
+    return typeof rec === "string" ? rec.trim() : "";
   });
 }
 
@@ -91,12 +62,12 @@ export async function POST(req: NextRequest) {
   const name = file.name.toLowerCase();
   const text = await file.text();
 
-  let rows: Row[];
+  let ids: string[];
   try {
     if (name.endsWith(".json")) {
-      rows = rowsFromJson(text);
+      ids = idsFromJson(text);
     } else if (name.endsWith(".csv") || name.endsWith(".txt")) {
-      rows = rowsFromCsv(text);
+      ids = idsFromCsv(text);
     } else {
       return NextResponse.json(
         {
@@ -114,46 +85,26 @@ export async function POST(req: NextRequest) {
   }
 
   let created = 0;
-  let updated = 0;
   let skipped = 0;
   const errors: { row: number; message: string }[] = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const customerId = row.customerId || undefined;
-    const customerName = row.name || undefined;
-
-    if (!customerId && !customerName) {
+  for (let i = 0; i < ids.length; i++) {
+    const customerId = ids[i];
+    if (!customerId) {
       skipped++;
-      errors.push({ row: i + 2, message: "No Customer ID or name — skipped." });
+      errors.push({ row: i + 2, message: "No Customer ID — skipped." });
       continue;
     }
 
-    const data = {
-      customerId,
-      name: customerName,
-      phone: row.phone || undefined,
-      address: row.address || undefined,
-      email: row.email || undefined,
-      notes: row.notes || undefined,
-    };
-
     try {
-      if (customerId) {
-        const existing = await prisma.customer.findUnique({
-          where: { customerId },
-        });
-        if (existing) {
-          await prisma.customer.update({ where: { customerId }, data });
-          updated++;
-        } else {
-          await prisma.customer.create({ data });
-          created++;
-        }
-      } else {
-        await prisma.customer.create({ data });
-        created++;
+      const existing = await prisma.customer.findUnique({ where: { customerId } });
+      if (existing) {
+        skipped++;
+        errors.push({ row: i + 2, message: "Already exists — skipped." });
+        continue;
       }
+      await prisma.customer.create({ data: { customerId } });
+      created++;
     } catch (err) {
       skipped++;
       const message =
@@ -169,14 +120,14 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       action: "CUSTOMERS_IMPORTED",
       entityType: "Customer",
-      details: `Imported ${file.name}: ${created} created, ${updated} updated, ${skipped} skipped`,
+      details: `Imported ${file.name}: ${created} created, ${skipped} skipped`,
     },
   });
 
   return NextResponse.json({
-    total: rows.length,
+    total: ids.length,
     created,
-    updated,
+    updated: 0,
     skipped,
     errors: errors.slice(0, 20),
   });

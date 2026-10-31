@@ -23,12 +23,9 @@ export default function MyOnusList({
               {o.status}
             </span>
           </div>
-          {o.installation?.customerName && (
+          {o.installation?.customerIdText && (
             <p className="mt-1 text-xs text-neutral-600">
-              Customer: {o.installation.customerName}
-              {o.installation.customerAddress
-                ? ` · ${o.installation.customerAddress}`
-                : ""}
+              Customer: <span className="font-mono">{o.installation.customerIdText}</span>
             </p>
           )}
           {o.installation?.installedAt && (

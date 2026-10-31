@@ -5,8 +5,6 @@ import { z } from "zod";
 
 const installSchema = z.object({
   customerId: z.string().optional(),
-  customerName: z.string().optional(),
-  customerAddress: z.string().optional(),
   photoUrl: z.string().url().optional(),
   manualOverride: z.boolean().optional(),
   notes: z.string().optional(),
@@ -29,12 +27,25 @@ export async function POST(
   const onu = await prisma.onu.findUnique({ where: { id } });
   if (!onu) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  let customerIdText: string | undefined;
+  if (parsed.data.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: parsed.data.customerId },
+      select: { customerId: true },
+    });
+    customerIdText = customer?.customerId;
+  }
+
   const [installation] = await prisma.$transaction([
     prisma.installation.create({
       data: {
         onuId: id,
         staffId: user.id,
-        ...parsed.data,
+        customerId: parsed.data.customerId,
+        customerIdText,
+        photoUrl: parsed.data.photoUrl,
+        manualOverride: parsed.data.manualOverride,
+        notes: parsed.data.notes,
       },
     }),
     prisma.onu.update({

@@ -52,8 +52,6 @@ export default function ScanAndInstall({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customerId: customer?.id || undefined,
-        customerName: customer?.name || undefined,
-        customerAddress: customer?.address || undefined,
         photoUrl: scanned?.photoUrl,
         manualOverride,
         notes: notes || undefined,

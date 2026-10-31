@@ -4,20 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
-// "" from a cleared form field means "clear this value" here, so it maps to
-// null (not undefined/omitted) — but must bypass min(1)/email validation
-// rather than fail it, the same empty-string issue as the create route.
-const blankToNull = (v: unknown) =>
-  typeof v === "string" && v.trim() === "" ? null : v;
-const nullableText = () => z.preprocess(blankToNull, z.string().trim().min(1).optional().nullable());
-
 const updateSchema = z.object({
-  customerId: nullableText(),
-  name: nullableText(),
-  phone: nullableText(),
-  address: nullableText(),
-  email: z.preprocess(blankToNull, z.string().email().optional().nullable()),
-  notes: nullableText(),
+  customerId: z.string().trim().min(1, "Customer ID is required."),
 });
 
 export async function PATCH(
@@ -76,14 +64,14 @@ export async function DELETE(
   const { id } = await params;
   const target = await prisma.customer.findUnique({
     where: { id },
-    select: { name: true, customerId: true },
+    select: { customerId: true },
   });
   if (!target) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
   // Installation.customerId is SetNull on delete, so install history keeps
-  // its customerName/customerAddress snapshot even after this.
+  // its customerIdText snapshot even after this.
   await prisma.customer.delete({ where: { id } });
 
   await prisma.auditLog.create({
@@ -92,7 +80,7 @@ export async function DELETE(
       action: "CUSTOMER_DELETED",
       entityType: "Customer",
       entityId: id,
-      details: `Deleted customer ${target.name ?? target.customerId ?? id}`,
+      details: `Deleted customer ${target.customerId}`,
     },
   });
 

@@ -4,30 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
 import { z } from "zod";
 
-// Empty-string form fields ("" from an untouched optional input) must be
-// treated the same as an omitted field — z.string().min(1).optional() only
-// skips validation for `undefined`, not for "", so without this an empty
-// optional field fails validation instead of being ignored.
-const blankToUndefined = (v: unknown) =>
-  typeof v === "string" && v.trim() === "" ? undefined : v;
-const optionalText = () => z.preprocess(blankToUndefined, z.string().trim().min(1).optional());
-
-// customerId is a free-text external reference (account number, code,
-// whatever the source system uses) — no format restriction beyond "not
-// blank". At least one of customerId/name must be given so a record is
-// identifiable by something.
-const createSchema = z
-  .object({
-    customerId: optionalText(),
-    name: optionalText(),
-    phone: optionalText(),
-    address: optionalText(),
-    email: z.preprocess(blankToUndefined, z.string().email().optional()),
-    notes: optionalText(),
-  })
-  .refine((d) => d.customerId || d.name, {
-    message: "Provide at least a Customer ID or a name.",
-  });
+// Customer ID is a free-text external reference (account number, code, a
+// name — whatever the source system uses) and the only field a Customer
+// has. No format restriction beyond "not blank".
+const createSchema = z.object({
+  customerId: z.string().trim().min(1, "Customer ID is required."),
+});
 
 export async function GET(req: NextRequest) {
   const { error } = await requireUser(["STAFF", "OFFICE", "ADMIN"]);
@@ -37,17 +19,7 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q");
 
   const customers = await prisma.customer.findMany({
-    where: q
-      ? {
-          OR: [
-            { customerId: { contains: q, mode: "insensitive" } },
-            { name: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q, mode: "insensitive" } },
-            { address: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+    where: q ? { customerId: { contains: q, mode: "insensitive" } } : undefined,
     include: {
       _count: { select: { installations: true } },
     },
@@ -89,7 +61,7 @@ export async function POST(req: NextRequest) {
       action: "CUSTOMER_CREATED",
       entityType: "Customer",
       entityId: customer.id,
-      details: `Added customer ${customer.name ?? customer.customerId ?? customer.id}`,
+      details: `Added customer ${customer.customerId}`,
     },
   });
 

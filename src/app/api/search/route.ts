@@ -23,14 +23,8 @@ export async function GET(req: NextRequest) {
       take: 5,
     }),
     prisma.customer.findMany({
-      where: {
-        OR: [
-          { customerId: { contains: q, mode: "insensitive" } },
-          { name: { contains: q, mode: "insensitive" } },
-          { phone: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true, customerId: true, name: true, phone: true },
+      where: { customerId: { contains: q, mode: "insensitive" } },
+      select: { id: true, customerId: true },
       take: 5,
     }),
     prisma.user.findMany({

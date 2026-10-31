@@ -75,37 +75,32 @@ model Onu {
 }
 
 model Customer {
-  id            String   @id @default(cuid())
-  // External reference/account ID from existing records (not our internal
-  // `id`) — free text, no format constraint, so it can hold whatever the
-  // source system uses (account numbers, emails, alphanumeric codes, etc).
-  // Unique when present so CSV/Excel/JSON imports can upsert by it.
-  customerId    String?  @unique
-  name          String?
-  phone         String?
-  address       String?
-  email         String?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id         String   @id @default(cuid())
+  // The only identifying field — free text, no format constraint, so it can
+  // hold whatever the source system uses (account numbers, codes, names,
+  // anything). Unique, required: a Customer record IS its ID.
+  customerId String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   installations Installation[]
 }
 
 model Installation {
-  id               String    @id @default(cuid())
-  onuId            String    @unique
-  onu              Onu       @relation(fields: [onuId], references: [id])
-  staffId          String
-  staff            User      @relation(fields: [staffId], references: [id])
-  customerId       String?
-  customer         Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerName     String?
-  customerAddress  String?
-  photoUrl         String?
-  manualOverride   Boolean   @default(false)
-  notes            String?
-  installedAt      DateTime  @default(now())
+  id             String    @id @default(cuid())
+  onuId          String    @unique
+  onu            Onu       @relation(fields: [onuId], references: [id])
+  staffId        String
+  staff          User      @relation(fields: [staffId], references: [id])
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  // Snapshot of Customer.customerId at install time, so the record stays
+  // readable even if the Customer row is later deleted (SetNull above).
+  customerIdText String?
+  photoUrl       String?
+  manualOverride Boolean   @default(false)
+  notes          String?
+  installedAt    DateTime  @default(now())
 }
 
 model Complaint {

@@ -141,24 +141,12 @@ export default function OnuDetail({ onuId }: { onuId: string }) {
                   value={new Date(onu.installation.installedAt).toLocaleString()}
                 />
                 <Field
-                  label="Customer"
+                  label="Customer ID"
                   value={
-                    onu.installation.customer?.name ??
-                    onu.installation.customerName ??
+                    onu.installation.customer?.customerId ??
+                    onu.installation.customerIdText ??
                     undefined
                   }
-                />
-                <Field
-                  label="Customer address"
-                  value={
-                    onu.installation.customer?.address ??
-                    onu.installation.customerAddress ??
-                    undefined
-                  }
-                />
-                <Field
-                  label="Customer phone"
-                  value={onu.installation.customer?.phone ?? undefined}
                 />
                 {onu.installation.manualOverride && (
                   <Field label="Verification" value="Manually verified by staff" />

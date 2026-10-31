@@ -187,7 +187,7 @@ export default function UserDetail({ userId }: { userId: string }) {
                     <tr className="border-b border-neutral-200 text-left text-neutral-600">
                       <th className="px-3 py-2">ONU</th>
                       <th className="px-3 py-2">MAC</th>
-                      <th className="px-3 py-2">Customer</th>
+                      <th className="px-3 py-2">Customer ID</th>
                       <th className="px-3 py-2">Installed</th>
                     </tr>
                   </thead>
@@ -205,13 +205,8 @@ export default function UserDetail({ userId }: { userId: string }) {
                         <td className="px-3 py-2 font-mono text-xs text-neutral-600">
                           {i.onu.macAddress}
                         </td>
-                        <td className="px-3 py-2 text-neutral-600">
-                          {i.customerName ?? "-"}
-                          {i.customerAddress && (
-                            <span className="block text-xs text-neutral-600">
-                              {i.customerAddress}
-                            </span>
-                          )}
+                        <td className="px-3 py-2 font-mono text-xs text-neutral-600">
+                          {i.customerIdText ?? "-"}
                         </td>
                         <td className="px-3 py-2 text-xs text-neutral-600">
                           {new Date(i.installedAt).toLocaleString()}

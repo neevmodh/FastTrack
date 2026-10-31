@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Results = {
   onus: { id: string; companyName: string; macAddress: string; status: string }[];
-  customers: { id: string; customerId?: string | null; name?: string | null; phone?: string | null }[];
+  customers: { id: string; customerId: string }[];
   users: { id: string; name: string; email: string; role: string }[];
 };
 
@@ -83,8 +83,7 @@ export default function GlobalSearch() {
                     <ResultRow
                       key={c.id}
                       onClick={() => go("/office?tab=customers")}
-                      primary={c.name ?? c.customerId ?? "Unnamed"}
-                      secondary={[c.customerId, c.phone].filter(Boolean).join(" · ")}
+                      primary={c.customerId}
                     />
                   ))}
                 </ResultGroup>

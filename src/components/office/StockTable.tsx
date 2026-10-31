@@ -65,7 +65,7 @@ export default function StockTable({
       o.macAddress.toLowerCase().includes(needle) ||
       (o.serialNumber ?? "").toLowerCase().includes(needle) ||
       (o.assignedTo?.name ?? "").toLowerCase().includes(needle) ||
-      (o.installation?.customerName ?? "").toLowerCase().includes(needle);
+      (o.installation?.customerIdText ?? "").toLowerCase().includes(needle);
     if (!matchesSearch) return false;
 
     if (statusFilter.size > 0 && !statusFilter.has(o.status)) return false;
@@ -97,8 +97,7 @@ export default function StockTable({
         ponSerial: o.ponSerial ?? "",
         status: o.status,
         staff: o.assignedTo?.name ?? "",
-        customer: o.installation?.customerName ?? "",
-        customerAddress: o.installation?.customerAddress ?? "",
+        customer: o.installation?.customerIdText ?? "",
         installedAt: o.installation?.installedAt ?? "",
         addedBy: o.addedBy?.name ?? "",
         addedAt: o.createdAt,
@@ -112,7 +111,6 @@ export default function StockTable({
         "status",
         "staff",
         "customer",
-        "customerAddress",
         "installedAt",
         "addedBy",
         "addedAt",
@@ -297,13 +295,8 @@ export default function StockTable({
                       "-"
                     )}
                   </td>
-                  <td className="px-3 py-2 text-neutral-600">
-                    {o.installation?.customerName ?? "-"}
-                    {o.installation?.customerAddress && (
-                      <span className="block text-xs text-neutral-600">
-                        {o.installation.customerAddress}
-                      </span>
-                    )}
+                  <td className="px-3 py-2 font-mono text-xs text-neutral-600">
+                    {o.installation?.customerIdText ?? "-"}
                   </td>
                   <td className="px-3 py-2 text-xs text-neutral-600">
                     {o.installation?.installedAt
