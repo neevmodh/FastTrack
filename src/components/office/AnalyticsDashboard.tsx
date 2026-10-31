@@ -76,12 +76,15 @@ export default function AnalyticsDashboard({
   return (
     <div className="space-y-4">
       {lowStock && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span className="text-base">⚠️</span>
-          <span>
-            <strong>Low stock:</strong> only {statusCounts.IN_STOCK} ONU
-            {statusCounts.IN_STOCK === 1 ? "" : "s"} available (below the{" "}
-            {LOW_STOCK_THRESHOLD}-unit threshold). Add more stock soon.
+        <div className="flex items-center gap-3 rounded-lg border border-neutral-200 border-l-[3px] border-l-amber-500 bg-white px-4 py-3 text-sm">
+          <svg className="h-4 w-4 flex-shrink-0 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span className="text-neutral-700">
+            <strong className="text-neutral-900">Low stock —</strong> only{" "}
+            <span className="data">{statusCounts.IN_STOCK}</span> ONU
+            {statusCounts.IN_STOCK === 1 ? "" : "s"} available, below the{" "}
+            {LOW_STOCK_THRESHOLD}-unit threshold.
           </span>
         </div>
       )}
@@ -94,11 +97,11 @@ export default function AnalyticsDashboard({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="ONU status breakdown">
+        <ChartCard title="Status breakdown">
           <StatusBarChart counts={statusCounts} total={totalOnus} />
         </ChartCard>
 
-        <ChartCard title={`Staff leaderboard (installs, ${staffCount} staff)`}>
+        <ChartCard title={`Leaderboard — installs (${staffCount} staff)`}>
           {staffLeaderboard.length === 0 ? (
             <EmptyChart text="No installs recorded yet." />
           ) : (
@@ -124,9 +127,9 @@ function StatTile({
   warn?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-3">
-      <p className="text-xs text-neutral-600">{label}</p>
-      <p className={`text-2xl font-semibold ${warn ? "text-amber-600" : "text-neutral-900"}`}>
+    <div className="rounded-lg border border-neutral-200 bg-white p-3.5">
+      <p className="eyebrow">{label}</p>
+      <p className={`data mt-1.5 text-[26px] font-semibold leading-none ${warn ? "text-amber-600" : "text-neutral-900"}`}>
         {value}
       </p>
     </div>
@@ -136,7 +139,7 @@ function StatTile({
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-neutral-900">{title}</h3>
+      <h3 className="eyebrow mb-4">{title}</h3>
       {children}
     </div>
   );
@@ -156,13 +159,13 @@ function StatusBarChart({ counts, total }: { counts: Record<string, number>; tot
         const count = counts[status] ?? 0;
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         return (
-          <div key={status} className="flex items-center gap-2">
+          <div key={status} className="flex items-center gap-2.5">
             <span className="w-20 shrink-0 text-xs font-medium text-neutral-700">
               {status.replace("_", " ")}
             </span>
-            <div className="h-5 flex-1 overflow-hidden rounded bg-neutral-100">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
               <div
-                className="h-full rounded transition-all"
+                className="h-full rounded-full transition-all"
                 style={{
                   width: `${(count / max) * 100}%`,
                   backgroundColor: STATUS_HEX[status],
@@ -170,7 +173,7 @@ function StatusBarChart({ counts, total }: { counts: Record<string, number>; tot
                 }}
               />
             </div>
-            <span className="w-16 shrink-0 text-right text-xs text-neutral-600">
+            <span className="data w-16 shrink-0 text-right text-xs text-neutral-500">
               {count} ({pct}%)
             </span>
           </div>
@@ -187,17 +190,17 @@ function LeaderboardChart({ data }: { data: { name: string; count: number }[] })
   return (
     <div className="space-y-2">
       {data.map((d) => (
-        <div key={d.name} className="flex items-center gap-2">
+        <div key={d.name} className="flex items-center gap-2.5">
           <span className="w-24 shrink-0 truncate text-xs font-medium text-neutral-700">
             {d.name}
           </span>
-          <div className="h-5 flex-1 overflow-hidden rounded bg-neutral-100">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-100">
             <div
-              className="h-full rounded"
+              className="h-full rounded-full"
               style={{ width: `${(d.count / max) * 100}%`, backgroundColor: CHART_HUE }}
             />
           </div>
-          <span className="w-8 shrink-0 text-right text-xs text-neutral-600">{d.count}</span>
+          <span className="data w-8 shrink-0 text-right text-xs text-neutral-500">{d.count}</span>
         </div>
       ))}
     </div>

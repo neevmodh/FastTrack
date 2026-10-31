@@ -21,19 +21,19 @@ export default function NavBar({
 
   return (
     <header
-      className="flex flex-wrap items-center justify-between gap-2 border-b-2 bg-white px-4 py-3"
+      className="flex flex-wrap items-center justify-between gap-2 border-b bg-white px-4 py-3"
       style={{ borderColor: accent }}
     >
       <div className="flex items-center gap-3">
         <span
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
+          className="data flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold"
           style={{ backgroundColor: accentBg, color: accent }}
         >
           {portal === "staff" ? "S" : "O"}
         </span>
         <div>
-          <p className="text-base font-semibold text-neutral-900">{title}</p>
-          {userName && <p className="text-xs text-neutral-600">{userName}</p>}
+          <p className="text-base font-semibold leading-tight text-neutral-900">{title}</p>
+          {userName && <p className="eyebrow leading-tight">{userName}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2">

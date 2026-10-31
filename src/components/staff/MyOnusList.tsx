@@ -17,7 +17,7 @@ export default function MyOnusList({
         <div key={o.id} className="rounded-lg border border-neutral-200 bg-white p-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-neutral-900">
-              {o.companyName} · {o.macAddress}
+              {o.companyName} · <span className="font-mono">{o.macAddress}</span>
             </p>
             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
               {o.status}

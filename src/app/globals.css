@@ -18,13 +18,29 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Data values (MAC addresses, serials, counts, dates, percentages) always
+   read in mono — it's the one typographic signal that says "this is a
+   precise value", used consistently instead of scattering it with color. */
+.data {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+/* Section eyebrow / field labels — small, spaced, muted caps. */
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8b8f99;
 }

@@ -76,18 +76,17 @@ export default function ScanAndInstall({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-2">
       <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-          1. Scan the ONU label
-        </h2>
+        <StepHeading n={1}>Scan the ONU label</StepHeading>
         <OcrCapture onChange={setScanned} />
 
         {scanned?.macAddress && (
           <p className="mt-3 text-sm">
             {matchedByMac ? (
               <span className="text-green-700">
-                Matched stock item: {matchedByMac.companyName} ({matchedByMac.macAddress})
+                Matched stock item: {matchedByMac.companyName} (
+                <span className="data">{matchedByMac.macAddress}</span>)
               </span>
             ) : (
               <span className="text-amber-700">
@@ -100,9 +99,7 @@ export default function ScanAndInstall({
       </div>
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-          2. Select ONU from available stock (cross-verify)
-        </h2>
+        <StepHeading n={2}>Select ONU from stock (cross-verify)</StepHeading>
         {loading ? (
           <p className="text-sm text-neutral-600">Loading stock...</p>
         ) : (
@@ -138,40 +135,48 @@ export default function ScanAndInstall({
         )}
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-lg border border-neutral-200 bg-white p-4"
-      >
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900">
-          3. Installation details
-        </h2>
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-800">
-              Customer (optional)
-            </label>
-            <CustomerPicker value={customer} onChange={setCustomer} canCreate={false} />
+      <form onSubmit={handleSubmit}>
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <StepHeading n={3}>Assign customer</StepHeading>
+          <div className="space-y-3">
+            <div>
+              <span className="eyebrow mb-1.5 block">Customer (optional)</span>
+              <CustomerPicker value={customer} onChange={setCustomer} canCreate={false} />
+            </div>
+            <textarea
+              placeholder="Notes (optional)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+              rows={2}
+            />
           </div>
-          <textarea
-            placeholder="Notes (optional)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-            rows={2}
-          />
         </div>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         {success && <p className="mt-3 text-sm text-green-600">{success}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-4 w-full rounded-md bg-[var(--staff-accent)] hover:bg-[var(--staff-accent-dark)] px-4 py-3 text-base font-semibold text-white disabled:opacity-50"
-        >
-          {submitting ? "Submitting..." : "Confirm installation"}
-        </button>
+        <div className="sticky bottom-0 -mx-4 mt-4 border-t border-neutral-200 bg-[var(--background)]/95 px-4 py-3 backdrop-blur-sm">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-lg bg-[var(--staff-accent)] hover:bg-[var(--staff-accent-dark)] px-4 py-3.5 text-base font-semibold text-white disabled:opacity-50"
+          >
+            {submitting ? "Submitting..." : "Confirm installation"}
+          </button>
+        </div>
       </form>
     </div>
+  );
+}
+
+function StepHeading({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-2.5 text-sm font-semibold text-neutral-900">
+      <span className="data flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white">
+        {n}
+      </span>
+      {children}
+    </h2>
   );
 }

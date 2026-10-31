@@ -110,22 +110,39 @@ export default function OcrCapture({
             if (file) handleFile(file);
           }}
         />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full rounded-xl border-2 border-dashed border-neutral-300 px-4 py-8 text-base font-semibold text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50"
-        >
-          📷 {previewUrl ? "Retake photo" : "Take photo of ONU label"}
-        </button>
+        {!previewUrl && (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-neutral-900 py-9 text-white"
+            style={{ aspectRatio: "16/10" }}
+          >
+            <svg className="absolute inset-4 h-[calc(100%-32px)] w-[calc(100%-32px)] opacity-40" viewBox="0 0 100 70" preserveAspectRatio="none" fill="none">
+              <path d="M0 14 V2 H12" stroke="white" strokeWidth="2" />
+              <path d="M88 2 H100 V14" stroke="white" strokeWidth="2" />
+              <path d="M100 56 V68 H88" stroke="white" strokeWidth="2" />
+              <path d="M12 68 H0 V56" stroke="white" strokeWidth="2" />
+            </svg>
+            <svg className="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z" /><circle cx="12" cy="13" r="4" />
+            </svg>
+            <span className="text-sm font-semibold">Take photo of ONU label</span>
+          </button>
+        )}
       </div>
 
       {previewUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={previewUrl}
-          alt="ONU label"
-          className="max-h-48 w-full rounded-md object-contain border border-neutral-200"
-        />
+        <div className="relative overflow-hidden rounded-xl border border-neutral-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="ONU label" className="max-h-48 w-full object-contain" />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="absolute bottom-2 right-2 rounded-md bg-neutral-900/85 px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            Retake
+          </button>
+        </div>
       )}
 
       {progress !== null && (
@@ -152,16 +169,19 @@ export default function OcrCapture({
           label="MAC address"
           value={fields.macAddress}
           onChange={(v) => update({ macAddress: v })}
+          mono
         />
         <Field
           label="Serial number"
           value={fields.serialNumber}
           onChange={(v) => update({ serialNumber: v })}
+          mono
         />
         <Field
           label="PON / GPON serial"
           value={fields.ponSerial}
           onChange={(v) => update({ ponSerial: v })}
+          mono
         />
         <Field
           label="Spec summary (ports, etc.)"
@@ -180,20 +200,20 @@ function Field({
   label,
   value,
   onChange,
+  mono,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  mono?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-neutral-800">
-        {label}
-      </span>
+      <span className="eyebrow mb-1.5 block">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+        className={`w-full rounded-md border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 ${mono ? "data" : ""}`}
       />
     </label>
   );
