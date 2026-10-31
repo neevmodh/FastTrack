@@ -17,7 +17,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { user, error } = await requireUser(["STAFF", "OFFICE", "ADMIN"]);
+  const { user, error } = await requireUser(["OFFICE", "ADMIN"]);
   if (error) return error;
 
   const { id } = await params;
@@ -66,7 +66,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { user, error } = await requireUser(["STAFF", "OFFICE", "ADMIN"]);
+  const { user, error } = await requireUser(["OFFICE", "ADMIN"]);
   if (error) return error;
 
   const { id } = await params;

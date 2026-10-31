@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Customer } from "@/lib/types";
+import { toCsv, downloadCsv } from "@/lib/csv-export";
 
 type ImportResult = {
   total: number;
@@ -11,11 +12,21 @@ type ImportResult = {
   errors: { row: number; message: string }[];
 };
 
-export default function CustomersPanel({ accent }: { accent: "staff" | "office" }) {
+export default function CustomersPanel({
+  accent,
+  canManage,
+}: {
+  accent: "staff" | "office";
+  canManage: boolean;
+}) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [hasInstalls, setHasInstalls] = useState<"" | "yes" | "no">("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
@@ -23,10 +34,10 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
 
   const accentVar = accent === "staff" ? "--staff-accent" : "--office-accent";
 
-  async function load(query?: string) {
+  async function load() {
     setLoading(true);
     const params = new URLSearchParams();
-    if (query) params.set("q", query);
+    if (q) params.set("q", q);
     const res = await fetch(`/api/customers?${params.toString()}`);
     if (res.ok) setCustomers(await res.json());
     setLoading(false);
@@ -34,18 +45,50 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    load(q);
+    load();
+  }
+
+  const filtered = customers.filter((c) => {
+    if (hasInstalls === "yes" && !(c._count?.installations ?? 0 > 0)) return false;
+    if (hasInstalls === "no" && (c._count?.installations ?? 0) > 0) return false;
+    if (from && new Date(c.createdAt) < new Date(from)) return false;
+    if (to && new Date(c.createdAt) > new Date(new Date(to).getTime() + 86400000))
+      return false;
+    return true;
+  });
+
+  function clearFilters() {
+    setHasInstalls("");
+    setFrom("");
+    setTo("");
+  }
+
+  function handleExport() {
+    const csv = toCsv(
+      filtered.map((c) => ({
+        customerId: c.customerId ?? "",
+        name: c.name ?? "",
+        phone: c.phone ?? "",
+        address: c.address ?? "",
+        email: c.email ?? "",
+        installs: c._count?.installations ?? 0,
+        createdAt: c.createdAt,
+      })),
+      ["customerId", "name", "phone", "address", "email", "installs", "createdAt"]
+    );
+    downloadCsv(`customers-${new Date().toISOString().slice(0, 10)}.csv`, csv);
   }
 
   async function handleDelete(id: string, label: string) {
     if (!confirm(`Delete customer "${label}"? Past installation records keep a snapshot of their details.`))
       return;
     const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
-    if (res.ok) load(q);
+    if (res.ok) load();
   }
 
   async function handleImportFile(file: File) {
@@ -64,7 +107,7 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
       return;
     }
     setImportResult(await res.json());
-    load(q);
+    load();
   }
 
   return (
@@ -85,31 +128,98 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
           </button>
         </form>
         <button
-          onClick={() => setShowForm((s) => !s)}
-          className="rounded-md px-3 py-2 text-sm font-medium text-white"
-          style={{ backgroundColor: `var(${accentVar})` }}
+          onClick={() => setShowFilters((s) => !s)}
+          className={`rounded-md border px-3 py-2 text-sm ${
+            showFilters || hasInstalls || from || to
+              ? "border-neutral-900 text-neutral-900"
+              : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+          }`}
         >
-          {showForm ? "Cancel" : "Add customer"}
+          Advanced filters{hasInstalls || from || to ? " •" : ""}
         </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.json,.txt"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImportFile(file);
-            e.target.value = "";
-          }}
-        />
         <button
-          onClick={() => fileRef.current?.click()}
-          disabled={importing}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+          onClick={handleExport}
+          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
         >
-          {importing ? "Importing..." : "Import CSV / JSON"}
+          Export CSV
         </button>
+        {canManage && (
+          <>
+            <button
+              onClick={() => setShowForm((s) => !s)}
+              className="rounded-md px-3 py-2 text-sm font-medium text-white"
+              style={{ backgroundColor: `var(${accentVar})` }}
+            >
+              {showForm ? "Cancel" : "Add customer"}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.json,.txt"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportFile(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+            >
+              {importing ? "Importing..." : "Import CSV / JSON"}
+            </button>
+          </>
+        )}
       </div>
+
+      {showFilters && (
+        <div className="mb-3 flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Has installations
+            </label>
+            <select
+              value={hasInstalls}
+              onChange={(e) => setHasInstalls(e.target.value as typeof hasInstalls)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Added from
+            </label>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">to</label>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          {(hasInstalls || from || to) && (
+            <button
+              onClick={clearFilters}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {importError && (
         <p className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -134,12 +244,12 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
         </div>
       )}
 
-      {showForm && (
+      {canManage && showForm && (
         <AddCustomerForm
           accentVar={accentVar}
           onCreated={() => {
             setShowForm(false);
-            load(q);
+            load();
           }}
         />
       )}
@@ -156,11 +266,11 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
                 <th className="px-3 py-2">Phone</th>
                 <th className="px-3 py-2">Address</th>
                 <th className="px-3 py-2">Installs</th>
-                <th className="px-3 py-2"></th>
+                {canManage && <th className="px-3 py-2"></th>}
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-3 py-2 font-mono text-xs text-neutral-700">
                     {c.customerId ?? "-"}
@@ -173,21 +283,26 @@ export default function CustomersPanel({ accent }: { accent: "staff" | "office" 
                   <td className="px-3 py-2 text-neutral-600">
                     {c._count?.installations ?? 0}
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      onClick={() =>
-                        handleDelete(c.id, c.name ?? c.customerId ?? c.id)
-                      }
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {canManage && (
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={() =>
+                          handleDelete(c.id, c.name ?? c.customerId ?? c.id)
+                        }
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
-              {customers.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-neutral-600">
+                  <td
+                    colSpan={canManage ? 6 : 5}
+                    className="px-3 py-6 text-center text-neutral-600"
+                  >
                     No customers found.
                   </td>
                 </tr>

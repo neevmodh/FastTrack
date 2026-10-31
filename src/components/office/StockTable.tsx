@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { AppUser, Onu } from "@/lib/types";
+import { toCsv, downloadCsv } from "@/lib/csv-export";
 
 const STATUS_COLORS: Record<string, string> = {
   IN_STOCK: "bg-neutral-100 text-neutral-700",
@@ -24,16 +25,60 @@ export default function StockTable({
   onRefresh: () => void;
 }) {
   const [q, setQ] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
+  const [staffFilter, setStaffFilter] = useState("");
+  const [installedFrom, setInstalledFrom] = useState("");
+  const [installedTo, setInstalledTo] = useState("");
+
+  const companies = Array.from(new Set(onus.map((o) => o.companyName))).sort();
+  const [companyFilter, setCompanyFilter] = useState("");
+
+  const activeFilterCount =
+    statusFilter.size +
+    (staffFilter ? 1 : 0) +
+    (companyFilter ? 1 : 0) +
+    (installedFrom ? 1 : 0) +
+    (installedTo ? 1 : 0);
+
+  function toggleStatus(status: string) {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setStatusFilter(new Set());
+    setStaffFilter("");
+    setCompanyFilter("");
+    setInstalledFrom("");
+    setInstalledTo("");
+  }
 
   const filtered = onus.filter((o) => {
     const needle = q.toLowerCase();
-    return (
+    const matchesSearch =
       o.companyName.toLowerCase().includes(needle) ||
       o.macAddress.toLowerCase().includes(needle) ||
       (o.serialNumber ?? "").toLowerCase().includes(needle) ||
       (o.assignedTo?.name ?? "").toLowerCase().includes(needle) ||
-      (o.installation?.customerName ?? "").toLowerCase().includes(needle)
-    );
+      (o.installation?.customerName ?? "").toLowerCase().includes(needle);
+    if (!matchesSearch) return false;
+
+    if (statusFilter.size > 0 && !statusFilter.has(o.status)) return false;
+    if (companyFilter && o.companyName !== companyFilter) return false;
+    if (staffFilter && o.assignedTo?.id !== staffFilter) return false;
+    if (installedFrom || installedTo) {
+      if (!o.installation?.installedAt) return false;
+      const d = new Date(o.installation.installedAt);
+      if (installedFrom && d < new Date(installedFrom)) return false;
+      if (installedTo && d > new Date(new Date(installedTo).getTime() + 86400000))
+        return false;
+    }
+    return true;
   });
 
   async function handleDelete(id: string) {
@@ -54,6 +99,40 @@ export default function StockTable({
     onRefresh();
   }
 
+  function handleExport() {
+    const csv = toCsv(
+      filtered.map((o) => ({
+        company: o.companyName,
+        model: o.model ?? "",
+        mac: o.macAddress,
+        serial: o.serialNumber ?? "",
+        ponSerial: o.ponSerial ?? "",
+        status: o.status,
+        staff: o.assignedTo?.name ?? "",
+        customer: o.installation?.customerName ?? "",
+        customerAddress: o.installation?.customerAddress ?? "",
+        installedAt: o.installation?.installedAt ?? "",
+        addedBy: o.addedBy?.name ?? "",
+        addedAt: o.createdAt,
+      })),
+      [
+        "company",
+        "model",
+        "mac",
+        "serial",
+        "ponSerial",
+        "status",
+        "staff",
+        "customer",
+        "customerAddress",
+        "installedAt",
+        "addedBy",
+        "addedAt",
+      ]
+    );
+    downloadCsv(`onu-stock-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
@@ -64,12 +143,114 @@ export default function StockTable({
           className="w-full max-w-sm rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
         />
         <button
+          onClick={() => setShowFilters((s) => !s)}
+          className={`rounded-md border px-3 py-2 text-sm ${
+            showFilters || activeFilterCount > 0
+              ? "border-neutral-900 text-neutral-900"
+              : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+          }`}
+        >
+          Advanced filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+        </button>
+        <button
           onClick={onRefresh}
           className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
         >
           Refresh
         </button>
+        <button
+          onClick={handleExport}
+          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+        >
+          Export CSV
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="mb-3 flex flex-wrap items-end gap-4 rounded-lg border border-neutral-200 bg-white p-3">
+          <div>
+            <p className="mb-1 text-xs font-medium text-neutral-800">Status</p>
+            <div className="flex flex-wrap gap-1">
+              {Object.keys(STATUS_COLORS).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleStatus(s)}
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                    statusFilter.has(s)
+                      ? STATUS_COLORS[s] + " ring-1 ring-neutral-900"
+                      : "bg-neutral-100 text-neutral-600"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Company
+            </label>
+            <select
+              value={companyFilter}
+              onChange={(e) => setCompanyFilter(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {companies.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Staff
+            </label>
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Any</option>
+              {staffUsers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">
+              Installed from
+            </label>
+            <input
+              type="date"
+              value={installedFrom}
+              onChange={(e) => setInstalledFrom(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-800">to</label>
+            <input
+              type="date"
+              value={installedTo}
+              onChange={(e) => setInstalledTo(e.target.value)}
+              className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={clearFilters}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-neutral-600">Loading...</p>

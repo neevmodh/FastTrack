@@ -6,6 +6,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const entityType = searchParams.get("entityType");
   const entityId = searchParams.get("entityId");
+  const action = searchParams.get("action");
+  const userId = searchParams.get("userId");
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
   // The full unfiltered activity log is office/admin only; a single
   // entity's timeline (e.g. one ONU's history) is fine for staff to see.
@@ -18,10 +22,20 @@ export async function GET(req: NextRequest) {
     where: {
       ...(entityType ? { entityType } : {}),
       ...(entityId ? { entityId } : {}),
+      ...(action ? { action } : {}),
+      ...(userId ? { userId } : {}),
+      ...(from || to
+        ? {
+            createdAt: {
+              ...(from ? { gte: new Date(from) } : {}),
+              ...(to ? { lt: new Date(new Date(to).getTime() + 86400000) } : {}),
+            },
+          }
+        : {}),
     },
     include: { user: { select: { id: true, name: true, role: true } } },
     orderBy: { createdAt: "desc" },
-    take: entityId ? undefined : 200,
+    take: entityId ? undefined : 500,
   });
 
   return NextResponse.json(logs);

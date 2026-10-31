@@ -6,9 +6,11 @@ import type { Customer } from "@/lib/types";
 export default function CustomerPicker({
   value,
   onChange,
+  canCreate = true,
 }: {
   value: Customer | null;
   onChange: (customer: Customer | null) => void;
+  canCreate?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Customer[]>([]);
@@ -107,16 +109,21 @@ export default function CustomerPicker({
                   </button>
                 ))}
                 {results.length === 0 && (
-                  <p className="px-3 py-2 text-sm text-neutral-600">No matches.</p>
+                  <p className="px-3 py-2 text-sm text-neutral-600">
+                    No matches.{" "}
+                    {!canCreate && "Ask Office to add this customer first."}
+                  </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(true)}
-                className="block w-full border-t border-neutral-100 px-3 py-2 text-left text-sm font-medium text-neutral-900 hover:bg-neutral-50"
-              >
-                + Add new customer
-              </button>
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(true)}
+                  className="block w-full border-t border-neutral-100 px-3 py-2 text-left text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+                >
+                  + Add new customer
+                </button>
+              )}
             </>
           ) : (
             <InlineAddCustomer

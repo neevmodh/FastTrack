@@ -150,7 +150,7 @@ export default function ScanAndInstall({
             <label className="mb-1 block text-xs font-medium text-neutral-800">
               Customer (optional)
             </label>
-            <CustomerPicker value={customer} onChange={setCustomer} />
+            <CustomerPicker value={customer} onChange={setCustomer} canCreate={false} />
           </div>
           <textarea
             placeholder="Notes (optional)"

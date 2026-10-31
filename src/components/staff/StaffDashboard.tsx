@@ -68,7 +68,7 @@ export default function StaffDashboard({
         />
       )}
       {tab === "mine" && <MyOnusList onus={myOnus} loading={loading} />}
-      {tab === "customers" && <CustomersPanel accent="staff" />}
+      {tab === "customers" && <CustomersPanel accent="staff" canManage={false} />}
       {tab === "report" && <ReportComplaint onus={myOnus} />}
     </div>
   );

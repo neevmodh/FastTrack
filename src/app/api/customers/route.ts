@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { user, error } = await requireUser(["STAFF", "OFFICE", "ADMIN"]);
+  const { user, error } = await requireUser(["OFFICE", "ADMIN"]);
   if (error) return error;
 
   const body = await req.json();
