@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STAFF
+  OFFICE
+  ADMIN
+}
+
+enum OnuStatus {
+  IN_STOCK
+  ASSIGNED
+  INSTALLED
+  FAULTY
+  RETURNED
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  phone         String?
+  role          Role     @default(STAFF)
+  active        Boolean  @default(true)
+  assignedIp    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  addedOnus       Onu[]        @relation("OnuAddedBy")
+  assignedOnus    Onu[]        @relation("OnuAssignedTo")
+  installations   Installation[]
+  complaints      Complaint[]  @relation("ComplaintReportedBy")
+  auditLogs       AuditLog[]
+}
+
+model Onu {
+  id            String    @id @default(cuid())
+  companyName   String
+  macAddress    String    @unique
+  serialNumber  String?
+  ponSerial     String?
+  model         String?
+  photoUrl      String?
+  status        OnuStatus @default(IN_STOCK)
+  ipAddress     String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  addedById     String?
+  addedBy       User?     @relation("OnuAddedBy", fields: [addedById], references: [id])
+
+  assignedToId  String?
+  assignedTo    User?     @relation("OnuAssignedTo", fields: [assignedToId], references: [id])
+
+  installation  Installation?
+  complaints    Complaint[]
+}
+
+model Installation {
+  id               String   @id @default(cuid())
+  onuId            String   @unique
+  onu              Onu      @relation(fields: [onuId], references: [id])
+  staffId          String
+  staff            User     @relation(fields: [staffId], references: [id])
+  customerName     String?
+  customerAddress  String?
+  photoUrl         String?
+  manualOverride   Boolean  @default(false)
+  notes            String?
+  installedAt      DateTime @default(now())
+}
+
+model Complaint {
+  id             String          @id @default(cuid())
+  onuId          String
+  onu            Onu             @relation(fields: [onuId], references: [id])
+  reportedById   String
+  reportedBy     User            @relation("ComplaintReportedBy", fields: [reportedById], references: [id])
+  description    String
+  status         ComplaintStatus @default(OPEN)
+  createdAt      DateTime        @default(now())
+  resolvedAt     DateTime?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+}

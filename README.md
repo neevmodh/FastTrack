@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ONU Manager
 
-## Getting Started
+Internal tool for managing GPON ONU stock, installations, staff, and complaints — built for field Staff and back-office Office/Admin roles.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 16 (App Router, TypeScript)
+- Postgres + Prisma (works with Vercel Postgres, Neon, Supabase, etc.)
+- NextAuth v5 (credentials + JWT sessions, role-based: `STAFF` / `OFFICE` / `ADMIN`)
+- Vercel Blob (ONU label photo storage)
+- Tesseract.js (client-side OCR — reads company name, MAC address, serial number off the ONU label)
+- Tailwind CSS
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. `npm install`
+2. Create a Postgres database (Vercel Postgres, Neon, or local) and set `DATABASE_URL` in `.env`.
+3. Set `AUTH_SECRET` in `.env` (generate with `npx auth secret`).
+4. Run migrations: `npx prisma migrate dev --name init`
+5. Seed the first admin user:
+   ```
+   SEED_ADMIN_EMAIL=you@company.com SEED_ADMIN_PASSWORD=yourpassword npm run seed
+   ```
+6. `npm run dev` and log in at `/login`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploying to Vercel
 
-## Learn More
+1. Push this repo to GitHub and import it in Vercel.
+2. Add a Postgres database via the Vercel Storage tab (or connect Neon/Supabase) — this sets `DATABASE_URL` automatically.
+3. Add a Blob store via Storage tab — this sets `BLOB_READ_WRITE_TOKEN` automatically.
+4. Set `AUTH_SECRET` and `NEXTAUTH_URL` (your production URL) in Project Settings → Environment Variables.
+5. Run `npx prisma migrate deploy` against the production database (via Vercel CLI or a one-off script), then run the seed script to create the first admin.
+6. Deploy.
 
-To learn more about Next.js, take a look at the following resources:
+## Roles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Staff**: scans/photographs an ONU label, OCR extracts company + MAC + serial, matches it against available stock, cross-verifies, and records an installation (with customer details) or reports a fault.
+- **Office**: adds new ONU stock (via OCR or manually), manages users, views all stock/installations/complaints, and sees the full activity log.
+- **Admin**: everything Office can do, plus creating/editing user accounts, assigning roles, and setting assigned IPs.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- OCR runs entirely in the browser (no external API calls, no per-scan cost) and is a best-effort guess — staff/office always confirm or correct the fields before submitting.
+- `public/icons/icon-192.png` and `icon-512.png` are placeholder solid-color icons; swap them for real branding before shipping as an installable PWA.
