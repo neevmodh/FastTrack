@@ -99,6 +99,14 @@ export type OnuDetail = Omit<Onu, "installation" | "complaints"> & {
     installedAt: string;
     staff: { id: string; name: string };
     customer?: Customer | null;
+    replaces?: {
+      id: string;
+      onu: { id: string; companyName: string; macAddress: string };
+    } | null;
+    replacedBy?: {
+      id: string;
+      onu: { id: string; companyName: string; macAddress: string };
+    } | null;
   } | null;
   complaints: (Complaint & { reportedBy: { id: string; name: string } })[];
 };

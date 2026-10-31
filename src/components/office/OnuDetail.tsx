@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { OnuDetail as OnuDetailType, AuditLogEntry, OnuStatus } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import type { OnuDetail as OnuDetailType, AuditLogEntry, OnuStatus, Onu } from "@/lib/types";
+import { extractErrorMessage } from "@/lib/api-error";
 
 const STATUS_COLORS: Record<string, string> = {
   IN_STOCK: "bg-neutral-100 text-neutral-700",
@@ -21,10 +23,12 @@ const STATUS_OPTIONS: OnuStatus[] = [
 ];
 
 export default function OnuDetail({ onuId }: { onuId: string }) {
+  const router = useRouter();
   const [onu, setOnu] = useState<OnuDetailType | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showReplace, setShowReplace] = useState(false);
   const requestIdRef = useRef(0);
 
   async function load() {
@@ -157,6 +161,50 @@ export default function OnuDetail({ onuId }: { onuId: string }) {
                   {onu.installation.notes}
                 </p>
               )}
+              {onu.installation.replaces && (
+                <p className="border-t border-neutral-100 px-3 py-2 text-xs text-neutral-600">
+                  Replaces{" "}
+                  <Link
+                    href={`/office/onu/${onu.installation.replaces.onu.id}`}
+                    className="font-mono text-[var(--office-accent-dark)] hover:underline"
+                  >
+                    {onu.installation.replaces.onu.companyName} ·{" "}
+                    {onu.installation.replaces.onu.macAddress}
+                  </Link>
+                </p>
+              )}
+              {onu.installation.replacedBy ? (
+                <p className="border-t border-neutral-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Replaced by{" "}
+                  <Link
+                    href={`/office/onu/${onu.installation.replacedBy.onu.id}`}
+                    className="font-mono underline"
+                  >
+                    {onu.installation.replacedBy.onu.companyName} ·{" "}
+                    {onu.installation.replacedBy.onu.macAddress}
+                  </Link>
+                </p>
+              ) : (
+                onu.status === "INSTALLED" && (
+                  <div className="border-t border-neutral-100 p-3">
+                    {!showReplace ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowReplace(true)}
+                        className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+                      >
+                        Replace ONU
+                      </button>
+                    ) : (
+                      <ReplaceOnuForm
+                        onuId={onu.id}
+                        onCancel={() => setShowReplace(false)}
+                        onReplaced={(newOnuId) => router.push(`/office/onu/${newOnuId}`)}
+                      />
+                    )}
+                  </div>
+                )
+              )}
             </Section>
           )}
 
@@ -251,5 +299,149 @@ function Field({ label, value }: { label: string; value?: string | null }) {
       <p className="text-xs text-neutral-600">{label}</p>
       <p className="font-medium text-neutral-900">{value ?? "-"}</p>
     </div>
+  );
+}
+
+function ReplaceOnuForm({
+  onuId,
+  onCancel,
+  onReplaced,
+}: {
+  onuId: string;
+  onCancel: () => void;
+  onReplaced: (newOnuId: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Onu[]>([]);
+  const [selected, setSelected] = useState<Onu | null>(null);
+  const [reason, setReason] = useState<"FAULTY" | "RETURNED">("FAULTY");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (selected) return;
+    const timeout = setTimeout(async () => {
+      const params = new URLSearchParams({ status: "IN_STOCK" });
+      if (query) params.set("q", query);
+      const res = await fetch(`/api/onu?${params.toString()}`);
+      if (res.ok) setResults(await res.json());
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [query, selected]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) {
+      setError("Pick a replacement ONU from stock.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    const res = await fetch(`/api/onu/${onuId}/replace`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newOnuId: selected.id, reason, notes: notes || undefined }),
+    });
+    setSubmitting(false);
+    if (!res.ok) {
+      setError(extractErrorMessage(await res.json().catch(() => null), "Failed to replace ONU."));
+      return;
+    }
+    onReplaced(selected.id);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-800">Reason</label>
+        <select
+          value={reason}
+          onChange={(e) => setReason(e.target.value as "FAULTY" | "RETURNED")}
+          className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+        >
+          <option value="FAULTY">Faulty — being swapped out</option>
+          <option value="RETURNED">Returned — no longer needed</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-800">
+          Replacement ONU (from stock)
+        </label>
+        {selected ? (
+          <div className="flex items-center justify-between rounded-md border border-neutral-300 bg-white px-3 py-2">
+            <p className="text-sm font-medium text-neutral-900">
+              {selected.companyName} · <span className="font-mono">{selected.macAddress}</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="text-xs text-neutral-600 hover:underline"
+            >
+              Change
+            </button>
+          </div>
+        ) : (
+          <div>
+            <input
+              placeholder="Search in-stock ONUs by company, MAC, serial..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-900"
+            />
+            <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200 bg-white">
+              {results.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setSelected(o)}
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-neutral-50"
+                >
+                  <span className="font-medium text-neutral-900">{o.companyName}</span>{" "}
+                  <span className="font-mono text-xs text-neutral-600">{o.macAddress}</span>
+                </button>
+              ))}
+              {results.length === 0 && (
+                <p className="px-3 py-2 text-sm text-neutral-600">
+                  No in-stock ONUs match. Add one to stock first.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-neutral-800">
+          Notes (optional)
+        </label>
+        <input
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="e.g. unit overheating"
+          className="w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+        />
+      </div>
+
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting || !selected}
+          className="rounded-md bg-[var(--office-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--office-accent-dark)] disabled:opacity-50"
+        >
+          {submitting ? "Replacing..." : "Confirm replacement"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs text-neutral-700 hover:bg-neutral-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }

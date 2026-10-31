@@ -101,6 +101,13 @@ model Installation {
   manualOverride Boolean   @default(false)
   notes          String?
   installedAt    DateTime  @default(now())
+
+  // When this installation replaced a prior ONU for the same customer,
+  // this points at the installation it replaced (one-to-one, both optional
+  // so the chain can start/end anywhere).
+  replacesId  String?       @unique
+  replaces    Installation? @relation("InstallationReplacement", fields: [replacesId], references: [id], onDelete: SetNull)
+  replacedBy  Installation? @relation("InstallationReplacement")
 }
 
 model Complaint {

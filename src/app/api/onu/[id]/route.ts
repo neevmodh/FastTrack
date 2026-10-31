@@ -35,6 +35,8 @@ export async function GET(
         include: {
           staff: { select: { id: true, name: true } },
           customer: true,
+          replaces: { include: { onu: { select: { id: true, companyName: true, macAddress: true } } } },
+          replacedBy: { include: { onu: { select: { id: true, companyName: true, macAddress: true } } } },
         },
       },
       complaints: {
