@@ -37,12 +37,12 @@ export default function ComplaintsPanel({
             >
               {c.status}
             </span>
-            <span className="text-xs text-neutral-400">
+            <span className="text-xs text-neutral-600">
               {new Date(c.createdAt).toLocaleString()}
             </span>
           </div>
           <p className="mt-2 text-sm text-neutral-900">{c.description}</p>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-neutral-600">
             {c.onu.companyName} · {c.onu.macAddress} · reported by {c.reportedBy.name}
           </p>
           <div className="mt-2 flex gap-2">
@@ -66,7 +66,7 @@ export default function ComplaintsPanel({
         </div>
       ))}
       {complaints.length === 0 && (
-        <p className="text-sm text-neutral-400">No complaints reported.</p>
+        <p className="text-sm text-neutral-600">No complaints reported.</p>
       )}
     </div>
   );

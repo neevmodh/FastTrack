@@ -44,11 +44,14 @@ export default function StaffDashboard({
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`whitespace-nowrap px-3 py-2 text-sm font-medium ${
+            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
               tab === t.key
-                ? "border-b-2 border-neutral-900 text-neutral-900"
-                : "text-neutral-500 hover:text-neutral-700"
+                ? "text-[var(--staff-accent-dark)]"
+                : "border-transparent text-neutral-600 hover:text-neutral-800"
             }`}
+            style={
+              tab === t.key ? { borderColor: "var(--staff-accent)" } : undefined
+            }
           >
             {t.label}
           </button>

@@ -7,7 +7,11 @@ export default async function OfficePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-neutral-50">
-      <NavBar title="Office Dashboard" userName={session?.user?.name} />
+      <NavBar
+        portal="office"
+        title="Office Dashboard"
+        userName={session?.user?.name}
+      />
       <OfficeDashboard isAdmin={session?.user?.role === "ADMIN"} />
     </div>
   );

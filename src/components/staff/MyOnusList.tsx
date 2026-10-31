@@ -9,7 +9,7 @@ export default function MyOnusList({
   onus: Onu[];
   loading: boolean;
 }) {
-  if (loading) return <p className="text-sm text-neutral-500">Loading...</p>;
+  if (loading) return <p className="text-sm text-neutral-600">Loading...</p>;
 
   return (
     <div className="space-y-2">
@@ -24,7 +24,7 @@ export default function MyOnusList({
             </span>
           </div>
           {o.installation?.customerName && (
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-600">
               Customer: {o.installation.customerName}
               {o.installation.customerAddress
                 ? ` · ${o.installation.customerAddress}`
@@ -32,14 +32,14 @@ export default function MyOnusList({
             </p>
           )}
           {o.installation?.installedAt && (
-            <p className="mt-1 text-xs text-neutral-400">
+            <p className="mt-1 text-xs text-neutral-600">
               Installed {new Date(o.installation.installedAt).toLocaleString()}
             </p>
           )}
         </div>
       ))}
       {onus.length === 0 && (
-        <p className="text-sm text-neutral-400">No ONUs assigned to you yet.</p>
+        <p className="text-sm text-neutral-600">No ONUs assigned to you yet.</p>
       )}
     </div>
   );

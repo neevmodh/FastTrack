@@ -104,7 +104,7 @@ export default function ScanAndInstall({
           2. Select ONU from available stock (cross-verify)
         </h2>
         {loading ? (
-          <p className="text-sm text-neutral-500">Loading stock...</p>
+          <p className="text-sm text-neutral-600">Loading stock...</p>
         ) : (
           <select
             value={selectedId}
@@ -173,7 +173,7 @@ export default function ScanAndInstall({
         <button
           type="submit"
           disabled={submitting}
-          className="mt-4 w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="mt-4 w-full rounded-md bg-[var(--staff-accent)] hover:bg-[var(--staff-accent-dark)] px-4 py-3 text-base font-semibold text-white disabled:opacity-50"
         >
           {submitting ? "Submitting..." : "Confirm installation"}
         </button>

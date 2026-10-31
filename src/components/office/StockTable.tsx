@@ -55,12 +55,12 @@ export default function StockTable({
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Loading...</p>
+        <p className="text-sm text-neutral-600">Loading...</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 text-left text-neutral-500">
+              <tr className="border-b border-neutral-200 text-left text-neutral-600">
                 <th className="px-3 py-2">Company</th>
                 <th className="px-3 py-2">MAC</th>
                 <th className="px-3 py-2">Serial</th>
@@ -107,7 +107,7 @@ export default function StockTable({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-neutral-400">
+                  <td colSpan={7} className="px-3 py-6 text-center text-neutral-600">
                     No ONUs found.
                   </td>
                 </tr>

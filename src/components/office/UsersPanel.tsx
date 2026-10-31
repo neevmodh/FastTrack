@@ -20,7 +20,7 @@ export default function UsersPanel({
         <div className="mb-3">
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-[var(--office-accent)] hover:bg-[var(--office-accent-dark)] px-3 py-2 text-sm font-medium text-white"
           >
             {showForm ? "Cancel" : "Add user"}
           </button>
@@ -39,7 +39,7 @@ export default function UsersPanel({
       <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left text-neutral-500">
+            <tr className="border-b border-neutral-200 text-left text-neutral-600">
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2">Role</th>
@@ -128,7 +128,7 @@ function UserRow({
           <button
             onClick={toggleActive}
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              user.active ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"
+              user.active ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
             }`}
           >
             {user.active ? "Active" : "Disabled"}
@@ -238,7 +238,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded-md bg-[var(--office-accent)] hover:bg-[var(--office-accent-dark)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? "Creating..." : "Create user"}
       </button>

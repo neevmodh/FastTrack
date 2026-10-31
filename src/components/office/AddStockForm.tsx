@@ -62,7 +62,7 @@ export default function AddStockForm({ onCreated }: { onCreated: () => void }) {
       <button
         type="submit"
         disabled={submitting}
-        className="mt-4 w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="mt-4 w-full rounded-md bg-[var(--office-accent)] hover:bg-[var(--office-accent-dark)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {submitting ? "Adding..." : "Add to stock"}
       </button>

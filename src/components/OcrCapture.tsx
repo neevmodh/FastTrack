@@ -113,9 +113,9 @@ export default function OcrCapture({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="w-full rounded-md border border-dashed border-neutral-300 px-4 py-6 text-sm text-neutral-600 hover:border-neutral-400"
+          className="w-full rounded-xl border-2 border-dashed border-neutral-300 px-4 py-8 text-base font-semibold text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50"
         >
-          {previewUrl ? "Retake photo" : "Take photo of ONU label"}
+          📷 {previewUrl ? "Retake photo" : "Take photo of ONU label"}
         </button>
       </div>
 
@@ -129,13 +129,13 @@ export default function OcrCapture({
       )}
 
       {progress !== null && (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-neutral-600">
           {fellBackToOnDevice
             ? `Cloud OCR unavailable, reading on-device... ${progress}%`
             : "Reading label..."}
         </p>
       )}
-      {uploading && <p className="text-sm text-neutral-500">Uploading photo...</p>}
+      {uploading && <p className="text-sm text-neutral-600">Uploading photo...</p>}
 
       <div className="grid grid-cols-1 gap-3">
         <Field
@@ -169,7 +169,7 @@ export default function OcrCapture({
           onChange={(v) => update({ specSummary: v })}
         />
       </div>
-      <p className="text-xs text-neutral-400">
+      <p className="text-xs text-neutral-600">
         OCR is a best guess — verify and correct the fields above before submitting.
       </p>
     </div>
@@ -187,13 +187,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-neutral-700">
+      <span className="mb-1 block text-sm font-medium text-neutral-800">
         {label}
       </span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-900"
+        className="w-full rounded-md border border-neutral-300 px-3 py-2.5 text-base text-neutral-900 outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
       />
     </label>
   );
