@@ -16,6 +16,9 @@ const CUSTOMER_ID_HEADERS = new Set([
 
 export const maxDuration = 60;
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB — comfortably fits 100k+ customer ID rows
+const MAX_ROWS = 50000;
+
 function normalizeHeader(h: string): string {
   return h.trim().toLowerCase().replace(/[\s_-]+/g, "");
 }
@@ -59,6 +62,12 @@ export async function POST(req: NextRequest) {
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
+  if (file.size > MAX_FILE_BYTES) {
+    return NextResponse.json(
+      { error: "File is too large (max 10MB)." },
+      { status: 400 }
+    );
+  }
 
   const name = file.name.toLowerCase();
   const text = await file.text();
@@ -81,6 +90,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: "Could not parse that file — check it's valid CSV/JSON." },
+      { status: 400 }
+    );
+  }
+
+  if (ids.length > MAX_ROWS) {
+    return NextResponse.json(
+      { error: `Too many rows (${ids.length}). Split the file into batches of ${MAX_ROWS} or fewer.` },
       { status: 400 }
     );
   }

@@ -13,17 +13,28 @@ const createSchema = z.object({
   notes: z.string().optional(),
 });
 
+const getQuerySchema = z.object({
+  status: z.enum(["IN_STOCK", "ASSIGNED", "INSTALLED", "FAULTY", "RETURNED"]).optional(),
+  q: z.string().trim().max(200).optional(),
+});
+
 export async function GET(req: NextRequest) {
   const { user, error } = await requireUser(["STAFF", "OFFICE", "ADMIN"]);
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
-  const q = searchParams.get("q");
+  const parsedQuery = getQuerySchema.safeParse({
+    status: searchParams.get("status") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+  });
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: parsedQuery.error.flatten() }, { status: 400 });
+  }
+  const { status, q } = parsedQuery.data;
 
   const onus = await prisma.onu.findMany({
     where: {
-      ...(status ? { status: status as never } : {}),
+      ...(status ? { status } : {}),
       ...(user.role === "STAFF"
         ? { OR: [{ assignedToId: user.id }, { status: "IN_STOCK" }] }
         : {}),

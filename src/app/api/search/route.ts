@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
+import { z } from "zod";
+
+const querySchema = z.object({ q: z.string().trim().max(200).optional() });
 
 export async function GET(req: NextRequest) {
   const { error } = await requireUser(["OFFICE", "ADMIN"]);
   if (error) return error;
 
-  const q = new URL(req.url).searchParams.get("q")?.trim();
+  const parsed = querySchema.safeParse({
+    q: new URL(req.url).searchParams.get("q") ?? undefined,
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  const q = parsed.data.q;
   if (!q || q.length < 2) return NextResponse.json({ onus: [], customers: [], users: [] });
 
   const [onus, customers, users] = await Promise.all([

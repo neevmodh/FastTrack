@@ -1,15 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/api-auth";
+import { z } from "zod";
+
+const isoDate = z
+  .string()
+  .refine((v) => !Number.isNaN(new Date(v).getTime()), "Must be a valid date.");
+
+const querySchema = z.object({
+  entityType: z.string().max(100).optional(),
+  entityId: z.string().max(200).optional(),
+  action: z.string().max(100).optional(),
+  userId: z.string().max(200).optional(),
+  from: isoDate.optional(),
+  to: isoDate.optional(),
+});
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const entityType = searchParams.get("entityType");
-  const entityId = searchParams.get("entityId");
-  const action = searchParams.get("action");
-  const userId = searchParams.get("userId");
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+  const parsed = querySchema.safeParse({
+    entityType: searchParams.get("entityType") ?? undefined,
+    entityId: searchParams.get("entityId") ?? undefined,
+    action: searchParams.get("action") ?? undefined,
+    userId: searchParams.get("userId") ?? undefined,
+    from: searchParams.get("from") ?? undefined,
+    to: searchParams.get("to") ?? undefined,
+  });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+  const { entityType, entityId, action, userId, from, to } = parsed.data;
 
   // The full unfiltered activity log is office/admin only; a single
   // entity's timeline (e.g. one ONU's history) is fine for staff to see.
