@@ -67,6 +67,10 @@ model Onu {
   addedById     String?
   addedBy       User?     @relation("OnuAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
 
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdAt])
+
   assignedToId  String?
   assignedTo    User?     @relation("OnuAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
 
@@ -84,6 +88,8 @@ model Customer {
   updatedAt  DateTime @updatedAt
 
   installations Installation[]
+
+  @@index([createdAt])
 }
 
 model Installation {
@@ -108,6 +114,9 @@ model Installation {
   replacesId  String?       @unique
   replaces    Installation? @relation("InstallationReplacement", fields: [replacesId], references: [id], onDelete: SetNull)
   replacedBy  Installation? @relation("InstallationReplacement")
+
+  @@index([customerId])
+  @@index([staffId])
 }
 
 model Complaint {
@@ -131,4 +140,7 @@ model AuditLog {
   entityId   String?
   details    String?
   createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

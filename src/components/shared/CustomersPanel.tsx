@@ -20,9 +20,12 @@ export default function CustomersPanel({
   accent: "staff" | "office";
   canManage: boolean;
 }) {
+  const PAGE_SIZE = 50;
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [hasInstalls, setHasInstalls] = useState<"" | "yes" | "no">("");
@@ -31,17 +34,43 @@ export default function CustomersPanel({
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const accentVar = accent === "staff" ? "--staff-accent" : "--office-accent";
 
-  async function load() {
-    setLoading(true);
+  function buildParams(extra?: Record<string, string>) {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
+    if (hasInstalls) params.set("hasInstalls", hasInstalls);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (extra) for (const [k, v] of Object.entries(extra)) params.set(k, v);
+    return params;
+  }
+
+  async function load() {
+    setLoading(true);
+    const params = buildParams({ take: String(PAGE_SIZE), skip: "0" });
     const res = await fetch(`/api/customers?${params.toString()}`);
-    if (res.ok) setCustomers(await res.json());
+    if (res.ok) {
+      const data = await res.json();
+      setCustomers(data.items);
+      setTotal(data.total);
+    }
     setLoading(false);
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    const params = buildParams({ take: String(PAGE_SIZE), skip: String(customers.length) });
+    const res = await fetch(`/api/customers?${params.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      setCustomers((prev) => [...prev, ...data.items]);
+      setTotal(data.total);
+    }
+    setLoadingMore(false);
   }
 
   useEffect(() => {
@@ -54,24 +83,24 @@ export default function CustomersPanel({
     load();
   }
 
-  const filtered = customers.filter((c) => {
-    if (hasInstalls === "yes" && !(c._count?.installations ?? 0 > 0)) return false;
-    if (hasInstalls === "no" && (c._count?.installations ?? 0) > 0) return false;
-    if (from && new Date(c.createdAt) < new Date(from)) return false;
-    if (to && new Date(c.createdAt) > new Date(new Date(to).getTime() + 86400000))
-      return false;
-    return true;
-  });
-
   function clearFilters() {
     setHasInstalls("");
     setFrom("");
     setTo("");
+    setTimeout(load, 0);
   }
 
-  function handleExport() {
+  async function handleExport() {
+    setExporting(true);
+    // take=0 asks the API for every matching row (no page limit) — export
+    // reflects the active filters, not just the page currently on screen.
+    const params = buildParams({ take: "0" });
+    const res = await fetch(`/api/customers?${params.toString()}`);
+    setExporting(false);
+    if (!res.ok) return;
+    const data = await res.json();
     const csv = toCsv(
-      filtered.map((c) => ({
+      (data.items as Customer[]).map((c) => ({
         customerId: c.customerId,
         installs: c._count?.installations ?? 0,
         createdAt: c.createdAt,
@@ -136,9 +165,10 @@ export default function CustomersPanel({
         </button>
         <button
           onClick={handleExport}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+          disabled={exporting}
+          className="rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
         >
-          Export CSV
+          {exporting ? "Exporting..." : "Export CSV"}
         </button>
         {canManage && (
           <>
@@ -207,6 +237,13 @@ export default function CustomersPanel({
               className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm"
             />
           </div>
+          <button
+            onClick={load}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-white"
+            style={{ backgroundColor: `var(${accentVar})` }}
+          >
+            Apply
+          </button>
           {(hasInstalls || from || to) && (
             <button
               onClick={clearFilters}
@@ -264,7 +301,7 @@ export default function CustomersPanel({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
+              {customers.map((c) => (
                 <tr key={c.id} className="border-b border-neutral-100 last:border-0">
                   <td className="px-3 py-2 font-mono text-sm font-medium text-neutral-900">
                     {c.customerId}
@@ -284,7 +321,7 @@ export default function CustomersPanel({
                   )}
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {customers.length === 0 && (
                 <tr>
                   <td
                     colSpan={canManage ? 3 : 2}
@@ -296,6 +333,23 @@ export default function CustomersPanel({
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && customers.length > 0 && (
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-neutral-600">
+            Showing {customers.length} of {total}
+          </p>
+          {customers.length < total && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+            >
+              {loadingMore ? "Loading..." : "Load more"}
+            </button>
+          )}
         </div>
       )}
     </div>

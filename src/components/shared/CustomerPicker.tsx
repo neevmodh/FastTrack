@@ -31,10 +31,10 @@ export default function CustomerPicker({
   useEffect(() => {
     if (!open) return;
     const timeout = setTimeout(async () => {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ take: "20" });
       if (query) params.set("q", query);
       const res = await fetch(`/api/customers?${params.toString()}`);
-      if (res.ok) setResults(await res.json());
+      if (res.ok) setResults((await res.json()).items);
     }, 200);
     return () => clearTimeout(timeout);
   }, [query, open]);
