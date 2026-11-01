@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 type Portal = "staff" | "office";
 
@@ -33,6 +33,23 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const { data: session, status } = useSession();
+
+  // The PWA's manifest start_url points straight at /login (a redirecting
+  // start_url breaks Android's install/WebAPK generation — see commit
+  // history). So an already-signed-in user reopening the installed app
+  // lands here first; send them straight to their portal instead of
+  // showing the form again.
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return;
+    const callbackUrl = params.get("callbackUrl");
+    if (callbackUrl) {
+      router.replace(callbackUrl);
+      return;
+    }
+    router.replace(session.user.role === "STAFF" ? "/staff" : "/office");
+  }, [status, session, params, router]);
+
   const [portal, setPortal] = useState<Portal>("staff");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

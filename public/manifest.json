@@ -2,7 +2,7 @@
   "name": "FastTrack — ONU stock & installation manager",
   "short_name": "FastTrack",
   "description": "ONU stock, installation, and staff management",
-  "start_url": "/",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#fafaf9",
   "theme_color": "#4338CA",
