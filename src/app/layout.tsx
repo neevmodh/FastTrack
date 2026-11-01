@@ -3,6 +3,7 @@ import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import InstallPrompt from "@/components/InstallPrompt";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const sans = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <InstallPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
