@@ -1,21 +1,29 @@
 {
-  "name": "ONU Manager",
-  "short_name": "ONU Manager",
+  "name": "FastTrack — ONU stock & installation manager",
+  "short_name": "FastTrack",
   "description": "ONU stock, installation, and staff management",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fafafa",
-  "theme_color": "#171717",
+  "background_color": "#fafaf9",
+  "theme_color": "#4338CA",
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
